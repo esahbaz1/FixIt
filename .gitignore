@@ -1,0 +1,45 @@
+# Maven / Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+
+# IDE (IntelliJ, VS Code, Eclipse)
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (ako koristiš frontend)
+node_modules/
+
+# Env fajlovi
+.env
+
+# Build folders
+dist/
+build/
+
+# Windows system files
+Desktop.ini
+
+# OneDrive / user stvari (VAŽNO za tvoj slučaj)
+OneDrive/
+AppData/
+Downloads/
+Documents/
+Pictures/
+
+# Misc
+*.tmp
+*.swp
