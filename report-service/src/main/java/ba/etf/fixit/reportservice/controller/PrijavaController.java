@@ -82,12 +82,42 @@ public class PrijavaController {
         @ApiResponse(responseCode = "204", description = "Prijava uspješno arhivirana"),
         @ApiResponse(responseCode = "404", description = "Prijava nije pronađena")
     })
+
+     
+    @PatchMapping("/{id}")
+public ResponseEntity<PrijavaResponseDTO> partialUpdate(
+        @PathVariable Long id,
+        @RequestBody Map<String, Object> fields) {
+
+    return ResponseEntity.ok(prijavaService.partialUpdate(id, fields));
+}
+
+@GetMapping("/hitne-prekoracene")
+public ResponseEntity<List<PrijavaResponseDTO>> hitnePrekoracene() {
+    return ResponseEntity.ok(prijavaService.hitneSaPrekoracenimRokom());
+}
+
+@GetMapping("/paged")
+public ResponseEntity<List<PrijavaResponseDTO>> dohvatiSvePaged(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "5") int size,
+        @RequestParam(defaultValue = "datumPodnosenja") String sortBy) {
+
+    return ResponseEntity.ok(prijavaService.dohvatiSvePaged(page, size, sortBy));
+}
+
+
+
+    
+
+
     @PatchMapping("/{id}/arhiviraj")
     public ResponseEntity<Void> arhiviraj(
             @Parameter(description = "ID prijave") @PathVariable Long id) {
         prijavaService.arhiviraj(id);
         return ResponseEntity.noContent().build();
     }
+   
 
     @Operation(summary = "Pretraži prijave po ključnoj riječi",
                description = "Pretražuje prijave po naslovu ili opisu.")

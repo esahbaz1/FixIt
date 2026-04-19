@@ -1,6 +1,7 @@
 package ba.etf.fixit.userservice.controller;
 
 import ba.etf.fixit.userservice.dto.*;
+import ba.etf.fixit.userservice.model.UlogaKorisnika;
 import ba.etf.fixit.userservice.service.KorisnikService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -80,4 +81,30 @@ public class KorisnikController {
         korisnikService.obrisi(id);
         return ResponseEntity.noContent().build();
     }
+
+
+@GetMapping("/api/korisnici/paged")
+public ResponseEntity<List<KorisnikResponseDTO>> dohvatiSvePaged(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "5") int size,
+        @RequestParam(defaultValue = "datumKreiranja") String sortBy) {
+
+    return ResponseEntity.ok(korisnikService.dohvatiSvePaged(page, size, sortBy));
+}
+
+
+@PostMapping("/api/korisnici/batch")
+public ResponseEntity<List<KorisnikResponseDTO>> batchRegistracija(
+        @RequestBody KorisnikBatchRequestDTO request) {
+
+    return ResponseEntity.status(HttpStatus.CREATED)
+            .body(korisnikService.batchRegistracija(request.getKorisnici()));
+}
+@GetMapping("/api/korisnici/aktivni")
+public ResponseEntity<List<KorisnikResponseDTO>> aktivniPoUlozi(
+        @RequestParam UlogaKorisnika uloga) {
+
+    return ResponseEntity.ok(korisnikService.aktivniPoUlozi(uloga));
+}
+
 }

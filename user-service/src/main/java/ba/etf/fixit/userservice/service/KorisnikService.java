@@ -8,6 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 
 @Service
 @Transactional
@@ -28,7 +32,7 @@ public class KorisnikService {
         return mapToResponse(nadjiKorisnika(id));
     }
 
-    public KorisnikResponseDTO registruj(RegistracijaRequestDTO dto) {
+      public KorisnikResponseDTO registruj(RegistracijaRequestDTO dto) {
         if (korisnikRepository.existsByEmail(dto.getEmail())) {
             throw new DuplikatException("Korisnik sa emailom '" + dto.getEmail() + "' vec postoji");
         }
@@ -36,7 +40,6 @@ public class KorisnikService {
         Korisnik k = new Korisnik(dto.getIme(), dto.getPrezime(), dto.getEmail(), dto.getLozinka(), uloga);
         return mapToResponse(korisnikRepository.save(k));
     }
-
     public LoginResponseDTO prijava(LoginRequestDTO dto) {
         Korisnik k = korisnikRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Korisnik sa tim emailom ne postoji"));
@@ -49,6 +52,14 @@ public class KorisnikService {
         return new LoginResponseDTO(k.getId(), k.getEmail(), k.getIme(), k.getPrezime(),
                 k.getUloga(), "Prijava uspjesna");
     }
+
+
+    public List<KorisnikResponseDTO> aktivniPoUlozi(UlogaKorisnika uloga) {
+    return korisnikRepository.findByUlogaAndAktivanTrue(uloga)
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+}
 
     public void obrisi(Long id) {
         if (!korisnikRepository.existsById(id))
@@ -65,4 +76,44 @@ public class KorisnikService {
         return new KorisnikResponseDTO(k.getId(), k.getIme(), k.getPrezime(),
                 k.getEmail(), k.getUloga(), k.getAktivan(), k.getDatumKreiranja());
     }
+
+
+    public List<KorisnikResponseDTO> dohvatiSvePaged(int page, int size, String sortBy) {
+
+    Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
+
+    return korisnikRepository.findAll(pageable)
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+}
+
+public List<KorisnikResponseDTO> batchRegistracija(List<RegistracijaRequestDTO> lista) {
+
+    List<Korisnik> korisnici = lista.stream().map(dto -> {
+
+        if (korisnikRepository.existsByEmail(dto.getEmail())) {
+            throw new DuplikatException("Email već postoji: " + dto.getEmail());
+        }
+
+        UlogaKorisnika uloga = dto.getUloga() != null ? dto.getUloga() : UlogaKorisnika.GRADJANIN;
+
+        return new Korisnik(
+                dto.getIme(),
+                dto.getPrezime(),
+                dto.getEmail(),
+                dto.getLozinka(),
+                uloga
+        );
+
+    }).collect(Collectors.toList());
+
+    return korisnikRepository.saveAll(korisnici)
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+}
+
+
+
 }

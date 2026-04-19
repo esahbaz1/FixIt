@@ -1,6 +1,9 @@
 package ba.etf.fixit.reportservice.repository;
 import ba.etf.fixit.reportservice.model.Prijava;
 import ba.etf.fixit.reportservice.model.PrioritetPrijave;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,7 +19,10 @@ public interface PrijavaRepository extends JpaRepository<Prijava, Long> {
     List<Prijava> findByKategorijaId(Long kategorijaId);
     List<Prijava> findByArhiviranFalse();
     List<Prijava> findByArhiviranTrue();
+    
+    Page<Prijava> findByArhiviranFalse(Pageable pageable);
 
+    
     @Query("SELECT p FROM Prijava p WHERE LOWER(p.naslov) LIKE LOWER(CONCAT('%',:k,'%')) OR LOWER(p.opis) LIKE LOWER(CONCAT('%',:k,'%'))")
     List<Prijava> pretraziPoKljucnojRijeci(@Param("k") String kljucnaRijec);
 
@@ -31,4 +37,8 @@ public interface PrijavaRepository extends JpaRepository<Prijava, Long> {
 
     @Query("SELECT p FROM Prijava p WHERE p.arhiviran = false AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL")
     List<Prijava> findZaHeatmap();
+
+
+    @Query("SELECT p FROM Prijava p WHERE p.prioritet = 'HITNO' AND p.datumRoka < :sada AND p.arhiviran = false")
+    List<Prijava> findHitneSaPrekoracenimRokom(@Param("sada") LocalDateTime sada);
 }

@@ -2,13 +2,16 @@ package ba.etf.fixit.notificationservice.service;
 import ba.etf.fixit.notificationservice.dto.*;
 import ba.etf.fixit.notificationservice.exception.ResourceNotFoundException;
 import ba.etf.fixit.notificationservice.model.Notifikacija;
+import ba.etf.fixit.notificationservice.model.TipNotifikacije;
 import ba.etf.fixit.notificationservice.repository.NotifikacijaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 @Service
 @Transactional
 public class NotifikacijaService {
@@ -41,4 +44,22 @@ public class NotifikacijaService {
         dto.setDatumKreiranja(n.getDatumKreiranja()); dto.setDatumCitanja(n.getDatumCitanja());
         return dto;
     }
+
+    public List<NotifikacijaResponseDTO> dohvatiZaKorisnikaPaged(Long korisnikId, int page, int size) {
+
+    Pageable pageable = PageRequest.of(page, size, Sort.by("datumKreiranja").descending());
+
+    return repo.findByKorisnikId(korisnikId, pageable)
+            .stream()
+            .map(this::map)
+            .collect(Collectors.toList());
+}
+
+
+public List<NotifikacijaResponseDTO> neprocitanePoTipu(Long korisnikId, TipNotifikacije tip) {
+    return repo.findByKorisnikIdAndProcitanoFalseAndTip(korisnikId, tip)
+            .stream()
+            .map(this::map)
+            .collect(Collectors.toList());
+}
 }
