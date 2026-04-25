@@ -3,9 +3,6 @@ import ba.etf.fixit.reportservice.dto.*;
 import ba.etf.fixit.reportservice.exception.ResourceNotFoundException;
 import ba.etf.fixit.reportservice.model.*;
 import ba.etf.fixit.reportservice.repository.*;
-
-import org.modelmapper.internal.bytebuddy.asm.Advice.OffsetMapping.Sort;
-import org.springdoc.core.converters.models.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,9 +17,17 @@ public class PrijavaService {
     private final PrijavaRepository prijavaRepo;
     private final KategorijaRepository kategorijaRepo;
     private final StatusiRepository statusiRepo;
+    private final TipPromjeneRepository tipPromjeneRepo;
 
-    public PrijavaService(PrijavaRepository prijavaRepo, KategorijaRepository kategorijaRepo, StatusiRepository statusiRepo){
-        this.prijavaRepo=prijavaRepo; this.kategorijaRepo=kategorijaRepo; this.statusiRepo=statusiRepo;
+    public PrijavaService(
+            PrijavaRepository prijavaRepo,
+            KategorijaRepository kategorijaRepo,
+            StatusiRepository statusiRepo,
+            TipPromjeneRepository tipPromjeneRepo) {
+        this.prijavaRepo = prijavaRepo;
+        this.kategorijaRepo = kategorijaRepo;
+        this.statusiRepo = statusiRepo;
+        this.tipPromjeneRepo = tipPromjeneRepo;
     }
 
     public List<PrijavaResponseDTO> dohvatiSve(){
@@ -63,9 +68,9 @@ public class PrijavaService {
 }
         if("Rijeseno".equals(noviStatusNaziv)) p.setDatumZavrsetka(LocalDateTime.now());
 
-        TipPromjene tip = new TipPromjene();
-        tip.setStatus1(stariStatus != null ? stariStatus.getNaziv() : null);
-         tip.setStatus2(noviStatusNaziv);
+        String stariNaziv = stariStatus != null ? stariStatus.getNaziv() : null;
+        TipPromjene tip = tipPromjeneRepo.findByStatus1AndStatus2(stariNaziv, noviStatusNaziv)
+                .orElseGet(() -> tipPromjeneRepo.save(new TipPromjene(null, stariNaziv, noviStatusNaziv)));
 
 
     HistorijaPrijave h = new HistorijaPrijave();

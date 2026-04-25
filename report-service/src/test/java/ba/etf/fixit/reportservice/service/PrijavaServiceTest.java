@@ -20,6 +20,7 @@ class PrijavaServiceTest {
     @Mock private PrijavaRepository prijavaRepo;
     @Mock private KategorijaRepository kategorijaRepo;
     @Mock private StatusiRepository statusiRepo;
+    @Mock private TipPromjeneRepository tipPromjeneRepo;
     @InjectMocks private PrijavaService service;
 
     private Kategorija napraviKategoriju() {
@@ -146,6 +147,8 @@ class PrijavaServiceTest {
         Prijava p = napraviPrijavu(kat, statusNovo);
         when(prijavaRepo.findById(1L)).thenReturn(Optional.of(p));
         when(statusiRepo.findByNaziv("U toku")).thenReturn(Optional.of(statusUToku));
+        when(tipPromjeneRepo.findByStatus1AndStatus2("Novo", "U toku"))
+                .thenReturn(Optional.of(new TipPromjene(1L, "Novo", "U toku")));
         when(prijavaRepo.save(any())).thenReturn(p);
 
         PrijavaResponseDTO result = service.promijeniStatus(1L, "U toku", 1L);
