@@ -1,7 +1,13 @@
 package ba.etf.fixit.reportservice.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "validacija",
        uniqueConstraints = @UniqueConstraint(columnNames = {"prijava_id", "korisnik_id"}))
@@ -23,14 +29,4 @@ public class Validacija {
     private LocalDateTime datumValidacije;
 
     @PrePersist protected void onCreate() { this.datumValidacije = LocalDateTime.now(); }
-
-    public Validacija() {}
-    public Validacija(Prijava prijava, Long korisnikId, Boolean potvrdjeno) {
-        this.prijava = prijava; this.korisnikId = korisnikId; this.potvrdjeno = potvrdjeno;
-    }
-    public Long getId() { return id; } public void setId(Long v) { this.id = v; }
-    public Prijava getPrijava() { return prijava; } public void setPrijava(Prijava v) { this.prijava = v; }
-    public Long getKorisnikId() { return korisnikId; } public void setKorisnikId(Long v) { this.korisnikId = v; }
-    public Boolean getPotvrdjeno() { return potvrdjeno; } public void setPotvrdjeno(Boolean v) { this.potvrdjeno = v; }
-    public LocalDateTime getDatumValidacije() { return datumValidacije; }
 }

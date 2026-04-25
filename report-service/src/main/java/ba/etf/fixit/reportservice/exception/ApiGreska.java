@@ -1,8 +1,20 @@
 package ba.etf.fixit.reportservice.exception;
 import java.time.LocalDateTime;
+import lombok.RequiredArgsConstructor;
+import lombok.Value;
+
+@Value
+@RequiredArgsConstructor
 public class ApiGreska {
-    private int status; private String greska; private String poruka; private LocalDateTime vrijemeGreske;
-    public ApiGreska(int status, String greska, String poruka){this.status=status;this.greska=greska;this.poruka=poruka;this.vrijemeGreske=LocalDateTime.now();}
-    public int getStatus(){return status;} public String getGreska(){return greska;}
-    public String getPoruka(){return poruka;} public LocalDateTime getVrijemeGreske(){return vrijemeGreske;}
+    private final int status; 
+    private final String greska; 
+    private final String poruka; 
+    private final LocalDateTime vrijemeGreske;
+
+    public ApiGreska(int status, String greska, String poruka){
+        this.status=status;
+        this.greska=greska;
+        this.poruka=poruka;
+        this.vrijemeGreske=LocalDateTime.now();
+    }
 }

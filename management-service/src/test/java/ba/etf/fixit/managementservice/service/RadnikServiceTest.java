@@ -24,7 +24,7 @@ class RadnikServiceTest {
     @InjectMocks private RadnikService service;
 
     private GradskaSluzba napraviSluzbu() {
-        GradskaSluzba s = new GradskaSluzba("JKP Test", "Opis", "jkp@test.ba", "033-000-000");
+        GradskaSluzba s = new GradskaSluzba(null, "JKP Test", "Opis", "jkp@test.ba", "033-000-000", true);
         s.setId(1L);
         return s;
     }
@@ -34,7 +34,7 @@ class RadnikServiceTest {
         GradskaSluzba sluzba = napraviSluzbu();
         when(sluzbaRepo.findById(1L)).thenReturn(Optional.of(sluzba));
 
-        Radnik radnik = new Radnik(10L, sluzba, "Inspektor", "Elektrika");
+        Radnik radnik = new Radnik(null, 10L, sluzba, "Inspektor", "Elektrika", true);
         when(radnikRepo.save(any())).thenReturn(radnik);
 
         RadnikRequestDTO dto = new RadnikRequestDTO();
@@ -65,7 +65,7 @@ class RadnikServiceTest {
     @Test
     void dohvatiPoId_postoji_vraćaDTO() {
         GradskaSluzba sluzba = napraviSluzbu();
-        Radnik radnik = new Radnik(5L, sluzba, "Vozač", null);
+        Radnik radnik = new Radnik(null, 5L, sluzba, "Vozač", null, true);
         when(radnikRepo.findById(1L)).thenReturn(Optional.of(radnik));
 
         RadnikResponseDTO result = service.dohvatiPoId(1L);
@@ -84,8 +84,8 @@ class RadnikServiceTest {
     void dohvatiSve_vraćaListu() {
         GradskaSluzba sluzba = napraviSluzbu();
         when(radnikRepo.findAll()).thenReturn(List.of(
-                new Radnik(1L, sluzba, "Inspektor", null),
-                new Radnik(2L, sluzba, "Vozač", null)));
+                new Radnik(null, 1L, sluzba, "Inspektor", null, true),
+                new Radnik(null, 2L, sluzba, "Vozač", null, true)));
         List<RadnikResponseDTO> result = service.dohvatiSve();
         assertEquals(2, result.size());
     }
@@ -94,7 +94,7 @@ class RadnikServiceTest {
     void dohvatiPoSluzbi_vraćaListu() {
         GradskaSluzba sluzba = napraviSluzbu();
         when(radnikRepo.findByGradskaSluzbaId(1L)).thenReturn(List.of(
-                new Radnik(3L, sluzba, "Čistač", null)));
+                new Radnik(null, 3L, sluzba, "Čistač", null, true)));
         List<RadnikResponseDTO> result = service.dohvatiPoSluzbi(1L);
         assertEquals(1, result.size());
     }

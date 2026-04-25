@@ -39,68 +39,86 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println(">>> Report Service: inicijalizacija...");
 
         // Statusi
-        Statusi sNovo        = statusiRepo.save(new Statusi("Novo",        "Novoprijavljen problem"));
-        Statusi sDodijeljeno = statusiRepo.save(new Statusi("Dodijeljeno", "Dodijeljen nadleznoj sluzbi"));
-        Statusi sURadu       = statusiRepo.save(new Statusi("U radu",      "Radnici rade na rjesavanju"));
-        Statusi sRijeseno    = statusiRepo.save(new Statusi("Rijeseno",    "Problem uspjesno rijesen"));
-        Statusi sZatvoreno   = statusiRepo.save(new Statusi("Zatvoreno",   "Prijava zatvorena"));
+        Statusi sNovo = statusiRepo.save(new Statusi(null, "Novo", "Novoprijavljen problem"));
+        Statusi sDodijeljeno = statusiRepo.save(new Statusi(null, "Dodijeljeno", "Dodijeljen nadleznoj sluzbi"));
+        Statusi sURadu = statusiRepo.save(new Statusi(null, "U radu", "Radnici rade na rjesavanju"));
+        Statusi sRijeseno = statusiRepo.save(new Statusi(null, "Rijeseno", "Problem uspjesno rijesen"));
+        Statusi sZatvoreno = statusiRepo.save(new Statusi(null, "Zatvoreno", "Prijava zatvorena"));
         System.out.println(">>> Kreirano 5 statusa.");
 
         // Tipovi promjena
-        TipPromjene tp1 = tipRepo.save(new TipPromjene(null,          "Novo"));
-        TipPromjene tp2 = tipRepo.save(new TipPromjene("Novo",        "Dodijeljeno"));
-        TipPromjene tp3 = tipRepo.save(new TipPromjene("Dodijeljeno", "U radu"));
-        TipPromjene tp4 = tipRepo.save(new TipPromjene("U radu",      "Rijeseno"));
-        TipPromjene tp5 = tipRepo.save(new TipPromjene("Rijeseno",    "Zatvoreno"));
-        TipPromjene tp6 = tipRepo.save(new TipPromjene("Zatvoreno",   "Novo"));
+        TipPromjene tp1 = tipRepo.save(new TipPromjene(null, null, "Novo"));
+        TipPromjene tp2 = tipRepo.save(new TipPromjene(null, "Novo", "Dodijeljeno"));
+        TipPromjene tp3 = tipRepo.save(new TipPromjene(null, "Dodijeljeno", "U radu"));
+        TipPromjene tp4 = tipRepo.save(new TipPromjene(null, "U radu", "Rijeseno"));
+        TipPromjene tp5 = tipRepo.save(new TipPromjene(null, "Rijeseno", "Zatvoreno"));
+        TipPromjene tp6 = tipRepo.save(new TipPromjene(null, "Zatvoreno", "Novo"));
         System.out.println(">>> Kreirano 6 tipova promjena.");
 
         // Kategorije
-        Kategorija putCesta  = kategorijaRepo.save(new Kategorija("Put/cesta",      "Ostecenja kolovoza", 1L));
-        Kategorija rasvjeta  = kategorijaRepo.save(new Kategorija("Javna rasvjeta", "Pokvarena rasvjeta", 2L));
-        Kategorija vodovod   = kategorijaRepo.save(new Kategorija("Vodovod",        "Kvarovi vodovodne mreze", 1L));
-        Kategorija zelenilo  = kategorijaRepo.save(new Kategorija("Zelenilo",       "Odrzavanje parkova", 4L));
-        Kategorija otpad     = kategorijaRepo.save(new Kategorija("Otpad",          "Nelegalne deponije", 1L));
-        Kategorija saobracaj = kategorijaRepo.save(new Kategorija("Saobracaj",      "Semafori i znakovi", 3L));
-        Kategorija ostalo    = kategorijaRepo.save(new Kategorija("Ostalo",         "Ostali problemi",    1L));
+        Kategorija putCesta = kategorijaRepo.save(new Kategorija(null, "Put/cesta", "Ostecenja kolovoza", 1L));
+        Kategorija rasvjeta = kategorijaRepo.save(new Kategorija(null, "Javna rasvjeta", "Pokvarena rasvjeta", 2L));
+        Kategorija vodovod = kategorijaRepo.save(new Kategorija(null, "Vodovod", "Kvarovi vodovodne mreze", 1L));
+        Kategorija zelenilo = kategorijaRepo.save(new Kategorija(null, "Zelenilo", "Odrzavanje parkova", 4L));
+        Kategorija otpad = kategorijaRepo.save(new Kategorija(null, "Otpad", "Nelegalne deponije", 1L));
+        Kategorija saobracaj = kategorijaRepo.save(new Kategorija(null, "Saobracaj", "Semafori i znakovi", 3L));
+        Kategorija ostalo = kategorijaRepo.save(new Kategorija(null, "Ostalo", "Ostali problemi", 1L));
         System.out.println(">>> Kreirano 7 kategorija.");
 
         // Prijava 1 - rupa na putu (U radu)
-        Prijava p1 = new Prijava("Velika rupa na asfaltu - Titova ulica",
-                "Na raskrsnici Titove i Marsala Tita postoji rupa oko 30cm dubine.",
-                43.8563, 18.4131, "Titova ulica bb, Sarajevo", putCesta, 5L, sURadu);
+        Prijava p1 = new Prijava();
+        p1.setNaslov("Velika rupa na asfaltu - Titova ulica");
+        p1.setOpis("Na raskrsnici Titove i Marsala Tita postoji rupa oko 30cm dubine.");
+        p1.setLatitude(43.8563);
+        p1.setLongitude(18.4131);
+        p1.setAdresa("Titova ulica bb, Sarajevo");
+        p1.setKategorija(putCesta);
+        p1.setKorisnikId(5L);
+        p1.setStatus(sURadu);
         p1.setPrioritet(PrioritetPrijave.VISOK);
         p1.setGrdSluzbald(1L);
         prijavaRepo.save(p1);
-        fotografijaRepo.save(new Fotografija(p1, "/uploads/prijave/1/rupa-titova.jpg"));
-        komentarRepo.save(new Komentar(5L, p1, "Hitna intervencija", "Molim hitnu intervenciju!", false));
-        komentarRepo.save(new Komentar(2L, p1, "Interna napomena", "Dodijeljen radniku.", true));
-        historijaRepo.save(new HistorijaPrijave(tp1, p1, 5L));
-        historijaRepo.save(new HistorijaPrijave(tp2, p1, 1L));
-        historijaRepo.save(new HistorijaPrijave(tp3, p1, 2L));
-        validacijaRepo.save(new Validacija(p1, 6L, true));
+        fotografijaRepo.save(new Fotografija(null, p1, "/uploads/prijave/1/rupa-titova.jpg", null));
+        komentarRepo.save(new Komentar(null, 5L, p1, "Hitna intervencija", "Molim hitnu intervenciju!", false, null));
+        komentarRepo.save(new Komentar(null, 2L, p1, "Interna napomena", "Dodijeljen radniku.", true, null));
+        historijaRepo.save(new HistorijaPrijave(null, tp1, p1, 5L, null));
+        historijaRepo.save(new HistorijaPrijave(null, tp2, p1, 1L, null));
+        historijaRepo.save(new HistorijaPrijave(null, tp3, p1, 2L, null));
+        validacijaRepo.save(new Validacija(null, p1, 6L, true, null));
 
         // Prijava 2 - rasvjeta (Novo)
-        Prijava p2 = new Prijava("Pokvarena ulicna svjetla - Bascarsija",
-                "Na Bascarsiji ne rade 3 ulicna svjetla vec sedmicu.",
-                43.8601, 18.4311, "Sebilj, Bascarsija, Sarajevo", rasvjeta, 6L, sNovo);
+        Prijava p2 = new Prijava();
+        p2.setNaslov("Pokvarena ulicna svjetla - Bascarsija");
+        p2.setOpis("Na Bascarsiji ne rade 3 ulicna svjetla vec sedmicu.");
+        p2.setLatitude(43.8601);
+        p2.setLongitude(18.4311);
+        p2.setAdresa("Sebilj, Bascarsija, Sarajevo");
+        p2.setKategorija(rasvjeta);
+        p2.setKorisnikId(6L);
+        p2.setStatus(sNovo);
         prijavaRepo.save(p2);
-        historijaRepo.save(new HistorijaPrijave(tp1, p2, 6L));
+        historijaRepo.save(new HistorijaPrijave(null, tp1, p2, 6L, null));
 
         // Prijava 3 - curenje vode (Rijeseno, arhivirana)
-        Prijava p3 = new Prijava("Curenje vode - Ilindenska",
-                "Curi voda iz vodovodne cijevi na Ilindenskoj ulici.",
-                43.8512, 18.3891, "Ilindenska ulica 12, Sarajevo", vodovod, 5L, sRijeseno);
+        Prijava p3 = new Prijava();
+        p3.setNaslov("Curenje vode - Ilindenska");
+        p3.setOpis("Curi voda iz vodovodne cijevi na Ilindenskoj ulici.");
+        p3.setLatitude(43.8512);
+        p3.setLongitude(18.3891);
+        p3.setAdresa("Ilindenska ulica 12, Sarajevo");
+        p3.setKategorija(vodovod);
+        p3.setKorisnikId(5L);
+        p3.setStatus(sRijeseno);
         p3.setPrioritet(PrioritetPrijave.HITNO);
         p3.setArhiviran(true);
         p3.setDatumZavrsetka(java.time.LocalDateTime.now().minusDays(2));
         prijavaRepo.save(p3);
-        historijaRepo.save(new HistorijaPrijave(tp1, p3, 5L));
-        historijaRepo.save(new HistorijaPrijave(tp2, p3, 1L));
-        historijaRepo.save(new HistorijaPrijave(tp3, p3, 2L));
-        historijaRepo.save(new HistorijaPrijave(tp4, p3, 3L));
-        komentarRepo.save(new Komentar(3L, p3, "Rijeseno", "Cijev zamijenjena.", false));
-        arhivaRepo.save(new Arhiva(p3, 5L));
+        historijaRepo.save(new HistorijaPrijave(null, tp1, p3, 5L, null));
+        historijaRepo.save(new HistorijaPrijave(null, tp2, p3, 1L, null));
+        historijaRepo.save(new HistorijaPrijave(null, tp3, p3, 2L, null));
+        historijaRepo.save(new HistorijaPrijave(null, tp4, p3, 3L, null));
+        komentarRepo.save(new Komentar(null, 3L, p3, "Rijeseno", "Cijev zamijenjena.", false, null));
+        arhivaRepo.save(new Arhiva(null, p3, 5L));
 
         System.out.println(">>> Kreirane 3 demo prijave.");
         System.out.println(">>> Report Service: inicijalizacija zavrsena!");

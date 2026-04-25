@@ -1,6 +1,12 @@
 package ba.etf.fixit.reportservice.model;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "tip_promjene")
 public class TipPromjene {
@@ -10,10 +16,4 @@ public class TipPromjene {
     private String status1;
     @Column(name = "status2", length = 100)
     private String status2;
-
-    public TipPromjene() {}
-    public TipPromjene(String status1, String status2) { this.status1 = status1; this.status2 = status2; }
-    public Long getId() { return id; } public void setId(Long v) { this.id = v; }
-    public String getStatus1() { return status1; } public void setStatus1(String v) { this.status1 = v; }
-    public String getStatus2() { return status2; } public void setStatus2(String v) { this.status2 = v; }
 }

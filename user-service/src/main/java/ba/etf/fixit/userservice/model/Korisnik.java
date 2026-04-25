@@ -3,11 +3,17 @@ package ba.etf.fixit.userservice.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Korisnik sistema - cuva podatke za autentifikaciju.
  * Profil i uloge se upravljaju u management-service.
  */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "korisnik")
 public class Korisnik {
@@ -46,19 +52,4 @@ public class Korisnik {
 
     @PrePersist
     protected void onCreate() { this.datumKreiranja = LocalDateTime.now(); }
-
-    public Korisnik() {}
-    public Korisnik(String ime, String prezime, String email, String lozinka, UlogaKorisnika uloga) {
-        this.ime = ime; this.prezime = prezime; this.email = email;
-        this.lozinka = lozinka; this.uloga = uloga; this.aktivan = true;
-    }
-
-    public Long getId() { return id; } public void setId(Long id) { this.id = id; }
-    public String getIme() { return ime; } public void setIme(String v) { this.ime = v; }
-    public String getPrezime() { return prezime; } public void setPrezime(String v) { this.prezime = v; }
-    public String getEmail() { return email; } public void setEmail(String v) { this.email = v; }
-    public String getLozinka() { return lozinka; } public void setLozinka(String v) { this.lozinka = v; }
-    public UlogaKorisnika getUloga() { return uloga; } public void setUloga(UlogaKorisnika v) { this.uloga = v; }
-    public Boolean getAktivan() { return aktivan; } public void setAktivan(Boolean v) { this.aktivan = v; }
-    public LocalDateTime getDatumKreiranja() { return datumKreiranja; }
 }

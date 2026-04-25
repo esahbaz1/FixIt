@@ -23,11 +23,19 @@ class KomentarServiceTest {
     @InjectMocks private KomentarService service;
 
     private Prijava napraviPrijavu() {
-        Kategorija kat = new Kategorija("Put", "Putevi", 1L);
+        Kategorija kat = new Kategorija(null, "Put", "Putevi", 1L);
         kat.setId(1L);
-        Statusi status = new Statusi("Novo", "Opis");
+        Statusi status = new Statusi(null, "Novo", "Opis");
         status.setId(1L);
-        Prijava p = new Prijava("Rupa", "Opis", 43.0, 18.0, "Sarajevo", kat, 1L, status);
+        Prijava p = new Prijava();
+        p.setNaslov("Rupa");
+        p.setOpis("Opis");
+        p.setLatitude(43.0);
+        p.setLongitude(18.0);
+        p.setAdresa("Sarajevo");
+        p.setKategorija(kat);
+        p.setKorisnikId(1L);
+        p.setStatus(status);
         p.setId(1L);
         return p;
     }
@@ -37,7 +45,7 @@ class KomentarServiceTest {
         Prijava p = napraviPrijavu();
         when(prijavaRepo.findById(1L)).thenReturn(Optional.of(p));
 
-        Komentar k = new Komentar(2L, p, "Naslov", "Tekst komentara", false);
+        Komentar k = new Komentar(null, 2L, p, "Naslov", "Tekst komentara", false, null);
         when(komentarRepo.save(any())).thenReturn(k);
 
         KomentarRequestDTO dto = new KomentarRequestDTO();
@@ -68,8 +76,8 @@ class KomentarServiceTest {
     @Test
     void dohvatiJavne_vraćaListu() {
         Prijava p = napraviPrijavu();
-        Komentar k1 = new Komentar(1L, p, "N1", "Tekst 1", false);
-        Komentar k2 = new Komentar(2L, p, "N2", "Tekst 2", false);
+        Komentar k1 = new Komentar(null, 1L, p, "N1", "Tekst 1", false, null);
+        Komentar k2 = new Komentar(null, 2L, p, "N2", "Tekst 2", false, null);
         when(komentarRepo.findByPrijavaIdAndInteranFalse(1L)).thenReturn(List.of(k1, k2));
 
         List<KomentarResponseDTO> result = service.dohvatiJavne(1L);

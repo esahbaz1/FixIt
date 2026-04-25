@@ -21,7 +21,7 @@ public class KomentarService {
     }
     public KomentarResponseDTO dodaj(Long prijavaId, KomentarRequestDTO dto){
         Prijava p = prijavaRepo.findById(prijavaId).orElseThrow(()->new ResourceNotFoundException("Prijava "+prijavaId+" nije pronadjena"));
-        Komentar k = new Komentar(dto.getKorisnikId(),p,dto.getNaslov(),dto.getTekst(),dto.getInteran());
+        Komentar k = new Komentar(null, dto.getKorisnikId(), p, dto.getNaslov(), dto.getTekst(), dto.getInteran(), null);
         return mapToResponse(komentarRepo.save(k));
     }
     private KomentarResponseDTO mapToResponse(Komentar k){

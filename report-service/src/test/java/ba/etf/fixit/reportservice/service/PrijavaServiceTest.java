@@ -23,20 +23,27 @@ class PrijavaServiceTest {
     @InjectMocks private PrijavaService service;
 
     private Kategorija napraviKategoriju() {
-        Kategorija k = new Kategorija("Put/cesta", "Oštećenja cesta", 1L);
+        Kategorija k = new Kategorija(null, "Put/cesta", "Oštećenja cesta", 1L);
         k.setId(1L);
         return k;
     }
 
     private Statusi napraviStatus(String naziv) {
-        Statusi s = new Statusi(naziv, "Opis statusa");
+        Statusi s = new Statusi(null, naziv, "Opis statusa");
         s.setId(1L);
         return s;
     }
 
     private Prijava napraviPrijavu(Kategorija k, Statusi s) {
-        Prijava p = new Prijava("Rupa na putu", "Velika rupa", 43.85, 18.41,
-                "Titova bb", k, 1L, s);
+        Prijava p = new Prijava();
+        p.setNaslov("Rupa na putu");
+        p.setOpis("Velika rupa");
+        p.setLatitude(43.85);
+        p.setLongitude(18.41);
+        p.setAdresa("Titova bb");
+        p.setKategorija(k);
+        p.setKorisnikId(1L);
+        p.setStatus(s);
         p.setId(1L);
         return p;
     }

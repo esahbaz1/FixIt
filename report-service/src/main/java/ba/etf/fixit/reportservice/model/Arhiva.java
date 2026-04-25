@@ -1,6 +1,12 @@
 package ba.etf.fixit.reportservice.model;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "arhiva")
 public class Arhiva {
@@ -13,13 +19,4 @@ public class Arhiva {
 
     @Column(name = "trajanje_prijave")
     private Long trajanjePrijave;
-
-    public Arhiva() {}
-    public Arhiva(Prijava prijava, Long trajanjePrijave) {
-        this.prijava = prijava; this.trajanjePrijave = trajanjePrijave;
-    }
-    public Long getId() { return id; } public void setId(Long v) { this.id = v; }
-    public Prijava getPrijava() { return prijava; } public void setPrijava(Prijava v) { this.prijava = v; }
-    public Long getTrajanjePrijave() { return trajanjePrijave; }
-    public void setTrajanjePrijave(Long v) { this.trajanjePrijave = v; }
 }

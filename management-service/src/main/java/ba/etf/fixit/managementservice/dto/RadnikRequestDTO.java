@@ -1,5 +1,12 @@
 package ba.etf.fixit.managementservice.dto;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class RadnikRequestDTO {
     @NotNull(message = "Korisnik ID je obavezan")
     private Long korisnikId;
@@ -7,8 +14,4 @@ public class RadnikRequestDTO {
     private Long gradskaSluzbaId;
     private String pozicija;
     private String kompetencije;
-    public Long getKorisnikId(){return korisnikId;} public void setKorisnikId(Long v){this.korisnikId=v;}
-    public Long getGradskaSluzbaId(){return gradskaSluzbaId;} public void setGradskaSluzbaId(Long v){this.gradskaSluzbaId=v;}
-    public String getPozicija(){return pozicija;} public void setPozicija(String v){this.pozicija=v;}
-    public String getKompetencije(){return kompetencije;} public void setKompetencije(String v){this.kompetencije=v;}
 }

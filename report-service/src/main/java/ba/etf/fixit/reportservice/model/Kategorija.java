@@ -1,7 +1,13 @@
 package ba.etf.fixit.reportservice.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "kategorija")
 public class Kategorija {
@@ -13,14 +19,4 @@ public class Kategorija {
     private String opis;
     @Column(name = "gradska_sluzba_id")
     private Long gradskaSluzbaId;
-
-    public Kategorija() {}
-    public Kategorija(String naziv, String opis, Long gradskaSluzbaId) {
-        this.naziv = naziv; this.opis = opis; this.gradskaSluzbaId = gradskaSluzbaId;
-    }
-    public Long getId() { return id; } public void setId(Long v) { this.id = v; }
-    public String getNaziv() { return naziv; } public void setNaziv(String v) { this.naziv = v; }
-    public String getOpis() { return opis; } public void setOpis(String v) { this.opis = v; }
-    public Long getGradskaSluzbaId() { return gradskaSluzbaId; }
-    public void setGradskaSluzbaId(Long v) { this.gradskaSluzbaId = v; }
 }

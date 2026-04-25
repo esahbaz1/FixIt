@@ -2,7 +2,13 @@ package ba.etf.fixit.reportservice.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "komentar")
 public class Komentar {
@@ -30,17 +36,4 @@ public class Komentar {
     private LocalDateTime datumKreiranja;
 
     @PrePersist protected void onCreate() { this.datumKreiranja = LocalDateTime.now(); }
-
-    public Komentar() {}
-    public Komentar(Long korisnikId, Prijava prijava, String naslov, String tekst, Boolean interan) {
-        this.korisnikId = korisnikId; this.prijava = prijava;
-        this.naslov = naslov; this.tekst = tekst; this.interan = interan;
-    }
-    public Long getId() { return id; } public void setId(Long v) { this.id = v; }
-    public Long getKorisnikId() { return korisnikId; } public void setKorisnikId(Long v) { this.korisnikId = v; }
-    public Prijava getPrijava() { return prijava; } public void setPrijava(Prijava v) { this.prijava = v; }
-    public String getNaslov() { return naslov; } public void setNaslov(String v) { this.naslov = v; }
-    public String getTekst() { return tekst; } public void setTekst(String v) { this.tekst = v; }
-    public Boolean getInteran() { return interan; } public void setInteran(Boolean v) { this.interan = v; }
-    public LocalDateTime getDatumKreiranja() { return datumKreiranja; }
 }
