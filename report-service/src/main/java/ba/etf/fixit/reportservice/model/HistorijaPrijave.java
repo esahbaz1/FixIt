@@ -8,7 +8,7 @@ public class HistorijaPrijave {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY , cascade = CascadeType.ALL)
     @JoinColumn(name = "tip_pr_id", nullable = false)
     private TipPromjene tipPromjene;
 

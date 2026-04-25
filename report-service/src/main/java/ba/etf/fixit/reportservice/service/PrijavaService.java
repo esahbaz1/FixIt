@@ -3,10 +3,15 @@ import ba.etf.fixit.reportservice.dto.*;
 import ba.etf.fixit.reportservice.exception.ResourceNotFoundException;
 import ba.etf.fixit.reportservice.model.*;
 import ba.etf.fixit.reportservice.repository.*;
+
+import org.modelmapper.internal.bytebuddy.asm.Advice.OffsetMapping.Sort;
+import org.springdoc.core.converters.models.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,10 +46,26 @@ public class PrijavaService {
 
     public PrijavaResponseDTO promijeniStatus(Long id, String noviStatusNaziv, Long korisnikId){
         Prijava p = nadji(id);
+        Statusi stariStatus = p.getStatus();
         Statusi novi = statusiRepo.findByNaziv(noviStatusNaziv)
                 .orElseThrow(()->new ResourceNotFoundException("Status '"+noviStatusNaziv+"' nije pronadjen"));
         p.setStatus(novi);
+        if (stariStatus != null && stariStatus.getNaziv().equals(noviStatusNaziv)) {
+         throw new IllegalArgumentException("Status je već postavljen na isti");
+}
         if("Rijeseno".equals(noviStatusNaziv)) p.setDatumZavrsetka(LocalDateTime.now());
+
+        TipPromjene tip = new TipPromjene();
+        tip.setStatus1(stariStatus != null ? stariStatus.getNaziv() : null);
+         tip.setStatus2(noviStatusNaziv);
+
+
+    HistorijaPrijave h = new HistorijaPrijave();
+    h.setPrijava(p);
+    h.setTipPromjene(tip);
+    h.setKorisnikId(korisnikId);
+
+    p.getHistorija().add(h);
         return mapToResponse(prijavaRepo.save(p));
     }
 
@@ -52,9 +73,51 @@ public class PrijavaService {
         Prijava p = nadji(id); p.setArhiviran(true); prijavaRepo.save(p);
     }
 
+    public PrijavaResponseDTO partialUpdate(Long id, Map<String, Object> fields) {
+
+    Prijava p = prijavaRepo.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Prijava nije pronađena"));
+
+    if (fields.containsKey("naslov")) {
+        p.setNaslov((String) fields.get("naslov"));
+    }
+
+    if (fields.containsKey("opis")) {
+        p.setOpis((String) fields.get("opis"));
+    }
+
+    if (fields.containsKey("adresa")) {
+        p.setAdresa((String) fields.get("adresa"));
+    }
+
+    if (fields.containsKey("prioritet")) {
+        p.setPrioritet(PrioritetPrijave.valueOf((String) fields.get("prioritet")));
+    }
+
+    return mapToResponse(prijavaRepo.save(p));
+}
+
     private Prijava nadji(Long id){
         return prijavaRepo.findById(id).orElseThrow(()->new ResourceNotFoundException("Prijava sa ID-em "+id+" nije pronadjena"));
     }
+     
+public List<PrijavaResponseDTO> dohvatiSvePaged(int page, int size, String sortBy) {
+
+    PageRequest pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(sortBy));
+
+    return prijavaRepo.findByArhiviranFalse(pageable)
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+}
+public List<PrijavaResponseDTO> hitneSaPrekoracenimRokom() {
+    return prijavaRepo.findHitneSaPrekoracenimRokom(LocalDateTime.now())
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+}
+
+
 
     public PrijavaResponseDTO mapToResponse(Prijava p){
         PrijavaResponseDTO dto = new PrijavaResponseDTO();

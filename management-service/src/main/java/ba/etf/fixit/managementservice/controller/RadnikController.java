@@ -70,4 +70,31 @@ public class RadnikController {
         service.obrisi(id);
         return ResponseEntity.noContent().build();
     }
+
+
+@GetMapping("/sluzba/{sluzbaId}/paged")
+public ResponseEntity<List<RadnikResponseDTO>> paged(
+        @PathVariable Long sluzbaId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "5") int size) {
+
+    return ResponseEntity.ok(service.dohvatiPoSluzbiPaged(sluzbaId, page, size));
+}
+
+
+@GetMapping("/sluzba/{sluzbaId}/aktivni")
+public ResponseEntity<List<RadnikResponseDTO>> aktivni(
+        @PathVariable Long sluzbaId,
+        @RequestParam String pozicija) {
+
+    return ResponseEntity.ok(service.aktivniPoPoziciji(sluzbaId, pozicija));
+}
+
+@PutMapping("/{radnikId}/premjesti/{sluzbaId}")
+public ResponseEntity<RadnikResponseDTO> premjesti(
+        @PathVariable Long radnikId,
+        @PathVariable Long sluzbaId) {
+
+    return ResponseEntity.ok(service.premjestiRadnika(radnikId, sluzbaId));
+}
 }

@@ -1,6 +1,7 @@
 package ba.etf.fixit.notificationservice.controller;
 
 import ba.etf.fixit.notificationservice.dto.*;
+import ba.etf.fixit.notificationservice.model.TipNotifikacije;
 import ba.etf.fixit.notificationservice.service.NotifikacijaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -67,4 +68,24 @@ public class NotifikacijaController {
             @Parameter(description = "ID notifikacije") @PathVariable Long id) {
         return ResponseEntity.ok(service.oznaciBrojProcitanim(id));
     }
+
+
+    @GetMapping("/korisnik/{korisnikId}/paged")
+public ResponseEntity<List<NotifikacijaResponseDTO>> paged(
+        @PathVariable Long korisnikId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "5") int size) {
+
+    return ResponseEntity.ok(service.dohvatiZaKorisnikaPaged(korisnikId, page, size));
+}
+
+
+
+@GetMapping("/korisnik/{korisnikId}/neprocitane-tip")
+public ResponseEntity<List<NotifikacijaResponseDTO>> neprocitanePoTipu(
+        @PathVariable Long korisnikId,
+        @RequestParam TipNotifikacije tip) {
+
+    return ResponseEntity.ok(service.neprocitanePoTipu(korisnikId, tip));
+}
 }
