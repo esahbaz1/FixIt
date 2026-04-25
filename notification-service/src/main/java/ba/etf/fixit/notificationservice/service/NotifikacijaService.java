@@ -28,7 +28,7 @@ public class NotifikacijaService {
         return repo.countByKorisnikIdAndProcitanoFalse(korisnikId);
     }
     public NotifikacijaResponseDTO kreiraj(NotifikacijaRequestDTO dto){
-        Notifikacija n = new Notifikacija(dto.getKorisnikId(),dto.getPrijavaId(),dto.getNaslov(),dto.getTekst(),dto.getTip());
+        Notifikacija n = new Notifikacija(null, dto.getKorisnikId(), dto.getPrijavaId(), dto.getNaslov(), dto.getTekst(), dto.getTip(), false, false, null, null);
         return map(repo.save(n));
     }
     public NotifikacijaResponseDTO oznaciBrojProcitanim(Long id){

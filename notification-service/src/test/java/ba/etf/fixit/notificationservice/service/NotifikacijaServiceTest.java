@@ -22,8 +22,8 @@ class NotifikacijaServiceTest {
     @InjectMocks private NotifikacijaService service;
 
     private Notifikacija napraviNotifikaciju(Long korisnikId) {
-        Notifikacija n = new Notifikacija(korisnikId, 1L, "Naslov test",
-                "Tekst notifikacije", TipNotifikacije.STATUS_PROMJENA);
+        Notifikacija n = new Notifikacija(null, korisnikId, 1L, "Naslov test",
+                "Tekst notifikacije", TipNotifikacije.STATUS_PROMJENA, false, false, null, null);
         n.setId(1L);
         return n;
     }

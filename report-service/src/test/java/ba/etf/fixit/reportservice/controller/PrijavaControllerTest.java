@@ -49,9 +49,9 @@ class PrijavaControllerTest {
         tipRepo.deleteAll();
 
         // Kreiranje potrebnih podataka za testove
-        tipRepo.save(new TipPromjene(null, "Novo"));
-        statusiRepo.save(new Statusi("Novo", "Novoprijavljen problem"));
-        Kategorija k = kategorijaRepo.save(new Kategorija("Put/cesta", "Ostecenja cesta", 1L));
+        tipRepo.save(new TipPromjene(null, null, "Novo"));
+        statusiRepo.save(new Statusi(null, "Novo", "Novoprijavljen problem"));
+        Kategorija k = kategorijaRepo.save(new Kategorija(null, "Put/cesta", "Ostecenja cesta", 1L));
         kategorijaId = k.getId();
     }
 

@@ -1,7 +1,13 @@
 package ba.etf.fixit.reportservice.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "fotografija")
 public class Fotografija {
@@ -19,11 +25,4 @@ public class Fotografija {
     private LocalDateTime datumUnosa;
 
     @PrePersist protected void onCreate() { this.datumUnosa = LocalDateTime.now(); }
-
-    public Fotografija() {}
-    public Fotografija(Prijava prijava, String putanja) { this.prijava = prijava; this.putanja = putanja; }
-    public Long getId() { return id; } public void setId(Long v) { this.id = v; }
-    public Prijava getPrijava() { return prijava; } public void setPrijava(Prijava v) { this.prijava = v; }
-    public String getPutanja() { return putanja; } public void setPutanja(String v) { this.putanja = v; }
-    public LocalDateTime getDatumUnosa() { return datumUnosa; }
 }

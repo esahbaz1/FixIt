@@ -26,7 +26,7 @@ class KorisnikServiceTest {
         dto.setUloga(UlogaKorisnika.GRADJANIN);
 
         when(korisnikRepository.existsByEmail("test@test.ba")).thenReturn(false);
-        Korisnik k = new Korisnik("Test","Korisnik","test@test.ba","Lozinka123!",UlogaKorisnika.GRADJANIN);
+        Korisnik k = new Korisnik(null, "Test", "Korisnik", "test@test.ba", "Lozinka123!", UlogaKorisnika.GRADJANIN, true, null);
         when(korisnikRepository.save(any())).thenReturn(k);
 
         KorisnikResponseDTO result = korisnikService.registruj(dto);
@@ -51,7 +51,7 @@ class KorisnikServiceTest {
 
     @Test
     void prijava_pogresnaLozinka_bacaException() {
-        Korisnik k = new Korisnik("Test","Test","t@t.ba","ispravna123!",UlogaKorisnika.GRADJANIN);
+        Korisnik k = new Korisnik(null, "Test", "Test", "t@t.ba", "ispravna123!", UlogaKorisnika.GRADJANIN, true, null);
         when(korisnikRepository.findByEmail("t@t.ba")).thenReturn(Optional.of(k));
         LoginRequestDTO dto = new LoginRequestDTO();
         dto.setEmail("t@t.ba"); dto.setLozinka("pogresna");

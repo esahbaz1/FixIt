@@ -37,7 +37,7 @@ public class KorisnikService {
             throw new DuplikatException("Korisnik sa emailom '" + dto.getEmail() + "' vec postoji");
         }
         UlogaKorisnika uloga = dto.getUloga() != null ? dto.getUloga() : UlogaKorisnika.GRADJANIN;
-        Korisnik k = new Korisnik(dto.getIme(), dto.getPrezime(), dto.getEmail(), dto.getLozinka(), uloga);
+        Korisnik k = new Korisnik(null, dto.getIme(), dto.getPrezime(), dto.getEmail(), dto.getLozinka(), uloga, true, null);
         return mapToResponse(korisnikRepository.save(k));
     }
     public LoginResponseDTO prijava(LoginRequestDTO dto) {
@@ -99,11 +99,14 @@ public List<KorisnikResponseDTO> batchRegistracija(List<RegistracijaRequestDTO> 
         UlogaKorisnika uloga = dto.getUloga() != null ? dto.getUloga() : UlogaKorisnika.GRADJANIN;
 
         return new Korisnik(
+                null,
                 dto.getIme(),
                 dto.getPrezime(),
                 dto.getEmail(),
                 dto.getLozinka(),
-                uloga
+                uloga,
+                true,
+                null
         );
 
     }).collect(Collectors.toList());

@@ -4,7 +4,15 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString(exclude = {"fotografije", "komentari", "historija", "validacije"})
 @Entity
 @Table(name = "prijava")
 public class Prijava {
@@ -71,32 +79,4 @@ public class Prijava {
 
     @PrePersist
     protected void onCreate() { this.datumPodnosenja = LocalDateTime.now(); }
-
-    public Prijava() {}
-    public Prijava(String naslov, String opis, Double latitude, Double longitude,
-                   String adresa, Kategorija kategorija, Long korisnikId, Statusi status) {
-        this.naslov = naslov; this.opis = opis; this.latitude = latitude;
-        this.longitude = longitude; this.adresa = adresa; this.kategorija = kategorija;
-        this.korisnikId = korisnikId; this.status = status; this.arhiviran = false;
-    }
-
-    public Long getId() { return id; } public void setId(Long v) { this.id = v; }
-    public String getNaslov() { return naslov; } public void setNaslov(String v) { this.naslov = v; }
-    public String getOpis() { return opis; } public void setOpis(String v) { this.opis = v; }
-    public Double getLatitude() { return latitude; } public void setLatitude(Double v) { this.latitude = v; }
-    public Double getLongitude() { return longitude; } public void setLongitude(Double v) { this.longitude = v; }
-    public String getAdresa() { return adresa; } public void setAdresa(String v) { this.adresa = v; }
-    public Statusi getStatus() { return status; } public void setStatus(Statusi v) { this.status = v; }
-    public PrioritetPrijave getPrioritet() { return prioritet; } public void setPrioritet(PrioritetPrijave v) { this.prioritet = v; }
-    public Kategorija getKategorija() { return kategorija; } public void setKategorija(Kategorija v) { this.kategorija = v; }
-    public Long getKorisnikId() { return korisnikId; } public void setKorisnikId(Long v) { this.korisnikId = v; }
-    public Long getGrdSluzbald() { return grdSluzbald; } public void setGrdSluzbald(Long v) { this.grdSluzbald = v; }
-    public LocalDateTime getDatumPodnosenja() { return datumPodnosenja; }
-    public LocalDateTime getDatumRoka() { return datumRoka; } public void setDatumRoka(LocalDateTime v) { this.datumRoka = v; }
-    public LocalDateTime getDatumZavrsetka() { return datumZavrsetka; } public void setDatumZavrsetka(LocalDateTime v) { this.datumZavrsetka = v; }
-    public Boolean getArhiviran() { return arhiviran; } public void setArhiviran(Boolean v) { this.arhiviran = v; }
-    public List<Fotografija> getFotografije() { return fotografije; }
-    public List<Komentar> getKomentari() { return komentari; }
-    public List<HistorijaPrijave> getHistorija() { return historija; }
-    public List<Validacija> getValidacije() { return validacije; }
 }

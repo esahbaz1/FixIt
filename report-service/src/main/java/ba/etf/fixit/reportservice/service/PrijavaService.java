@@ -38,7 +38,15 @@ public class PrijavaService {
                 .orElseThrow(()->new ResourceNotFoundException("Kategorija "+dto.getKategorijaId()+" nije pronadjena"));
         Statusi status = statusiRepo.findByNaziv("Novo")
                 .orElseThrow(()->new ResourceNotFoundException("Status Novo nije pronadjen"));
-        Prijava p = new Prijava(dto.getNaslov(),dto.getOpis(),dto.getLatitude(),dto.getLongitude(),dto.getAdresa(),kat,dto.getKorisnikId(),status);
+        Prijava p = new Prijava();
+        p.setNaslov(dto.getNaslov());
+        p.setOpis(dto.getOpis());
+        p.setLatitude(dto.getLatitude());
+        p.setLongitude(dto.getLongitude());
+        p.setAdresa(dto.getAdresa());
+        p.setKategorija(kat);
+        p.setKorisnikId(dto.getKorisnikId());
+        p.setStatus(status);
         if(dto.getPrioritet()!=null) p.setPrioritet(dto.getPrioritet());
         if(dto.getDatumRoka()!=null) p.setDatumRoka(dto.getDatumRoka());
         return mapToResponse(prijavaRepo.save(p));

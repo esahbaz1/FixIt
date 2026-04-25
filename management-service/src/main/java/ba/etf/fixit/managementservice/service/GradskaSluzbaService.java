@@ -22,7 +22,7 @@ public class GradskaSluzbaService {
     }
     public GradskaSluzbaResponseDTO kreiraj(GradskaSluzbaRequestDTO dto){
         if(repo.existsByNaziv(dto.getNaziv())) throw new DuplikatException("Sluzba '"+dto.getNaziv()+"' vec postoji");
-        GradskaSluzba s = new GradskaSluzba(dto.getNaziv(),dto.getOpis(),dto.getKontaktEmail(),dto.getKontaktTelefon());
+        GradskaSluzba s = new GradskaSluzba(null, dto.getNaziv(), dto.getOpis(), dto.getKontaktEmail(), dto.getKontaktTelefon(), true);
         return mapToResponse(repo.save(s));
     }
     public GradskaSluzbaResponseDTO azuriraj(Long id, GradskaSluzbaRequestDTO dto){

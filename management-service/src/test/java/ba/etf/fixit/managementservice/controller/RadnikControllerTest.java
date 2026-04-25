@@ -39,7 +39,7 @@ class RadnikControllerTest {
         sluzbaRepo.deleteAll();
 
         GradskaSluzba sluzba = sluzbaRepo.save(
-                new GradskaSluzba("JKP Test", "Testna služba", "jkp@test.ba", "033-000-000"));
+                new GradskaSluzba(null, "JKP Test", "Testna služba", "jkp@test.ba", "033-000-000", true));
         sluzbaId = sluzba.getId();
     }
 
@@ -72,7 +72,7 @@ class RadnikControllerTest {
     @Test
     void dohvatiPoSluzbi_uspjesno() throws Exception {
         sluzbaRepo.findById(sluzbaId).ifPresent(s ->
-                radnikRepo.save(new Radnik(5L, s, "Vozač", null)));
+                radnikRepo.save(new Radnik(null, 5L, s, "Vozač", null, true)));
 
         mockMvc.perform(get("/api/radnici/sluzba/" + sluzbaId))
                 .andExpect(status().isOk())

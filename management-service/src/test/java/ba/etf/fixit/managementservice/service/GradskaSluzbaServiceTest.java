@@ -27,7 +27,7 @@ class GradskaSluzbaServiceTest {
         dto.setNaziv("JKP Rad"); dto.setOpis("Čistoća"); dto.setKontaktEmail("jkp@rad.ba");
 
         when(repo.existsByNaziv("JKP Rad")).thenReturn(false);
-        GradskaSluzba sluzba = new GradskaSluzba("JKP Rad", "Čistoća", "jkp@rad.ba", null);
+        GradskaSluzba sluzba = new GradskaSluzba(null, "JKP Rad", "Čistoća", "jkp@rad.ba", null, true);
         when(repo.save(any())).thenReturn(sluzba);
 
         GradskaSluzbaResponseDTO result = service.kreiraj(dto);
@@ -47,7 +47,7 @@ class GradskaSluzbaServiceTest {
 
     @Test
     void dohvatiPoId_postoji_vrataDTO() {
-        GradskaSluzba sluzba = new GradskaSluzba("JKP Voda", "Voda", "voda@ba.ba", "033-100-100");
+        GradskaSluzba sluzba = new GradskaSluzba(null, "JKP Voda", "Voda", "voda@ba.ba", "033-100-100", true);
         when(repo.findById(1L)).thenReturn(Optional.of(sluzba));
 
         GradskaSluzbaResponseDTO result = service.dohvatiPoId(1L);
@@ -64,15 +64,15 @@ class GradskaSluzbaServiceTest {
     @Test
     void dohvatiSve_vrataListu() {
         when(repo.findAll()).thenReturn(List.of(
-                new GradskaSluzba("JKP A", null, null, null),
-                new GradskaSluzba("JKP B", null, null, null)));
+                new GradskaSluzba(null, "JKP A", null, null, null, true),
+                new GradskaSluzba(null, "JKP B", null, null, null, true)));
         List<GradskaSluzbaResponseDTO> result = service.dohvatiSve();
         assertEquals(2, result.size());
     }
 
     @Test
     void azuriraj_postoji_uspjesno() {
-        GradskaSluzba sluzba = new GradskaSluzba("Stari naziv", null, null, null);
+        GradskaSluzba sluzba = new GradskaSluzba(null, "Stari naziv", null, null, null, true);
         when(repo.findById(1L)).thenReturn(Optional.of(sluzba));
         when(repo.save(any())).thenReturn(sluzba);
 

@@ -34,7 +34,7 @@ public class RadnikService {
     public RadnikResponseDTO kreiraj(RadnikRequestDTO dto){
         GradskaSluzba sluzba = sluzbaRepo.findById(dto.getGradskaSluzbaId())
                 .orElseThrow(()->new ResourceNotFoundException("Gradska sluzba "+dto.getGradskaSluzbaId()+" nije pronadjena"));
-        Radnik r = new Radnik(dto.getKorisnikId(), sluzba, dto.getPozicija(), dto.getKompetencije());
+        Radnik r = new Radnik(null, dto.getKorisnikId(), sluzba, dto.getPozicija(), dto.getKompetencije(), true);
         return mapToResponse(radnikRepo.save(r));
     }
     public void obrisi(Long id){
