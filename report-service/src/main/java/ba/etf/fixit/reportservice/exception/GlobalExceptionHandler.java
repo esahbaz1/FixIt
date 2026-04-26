@@ -1,11 +1,15 @@
 package ba.etf.fixit.reportservice.exception;
+
+import ba.etf.fixit.reportservice.client.UserServiceKlijent;
 import org.springframework.http.*;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String,Object>> handleValidacija(MethodArgumentNotValidException ex){
         Map<String,String> greske=new HashMap<>();
@@ -13,10 +17,29 @@ public class GlobalExceptionHandler {
         Map<String,Object> odg=new HashMap<>(); odg.put("status",400); odg.put("greska","VALIDATION_ERROR"); odg.put("poruke",greske);
         return ResponseEntity.badRequest().body(odg);
     }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiGreska> handleNotFound(ResourceNotFoundException ex){
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiGreska(404,"NOT_FOUND",ex.getMessage()));
     }
+
+
+    @ExceptionHandler(UserServiceKlijent.KorisnikNijePronadjenException.class)
+    public ResponseEntity<ApiGreska> handleKorisnikNijePronadjen(UserServiceKlijent.KorisnikNijePronadjenException ex){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiGreska(404,"KORISNIK_NOT_FOUND",ex.getMessage()));
+    }
+
+ 
+    @ExceptionHandler(UserServiceKlijent.KorisnikNijeAktivanException.class)
+    public ResponseEntity<ApiGreska> handleKorisnikNijeAktivan(UserServiceKlijent.KorisnikNijeAktivanException ex){
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new ApiGreska(422,"KORISNIK_NIJE_AKTIVAN",ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiGreska> handleIllegalArg(IllegalArgumentException ex){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiGreska(400,"BAD_REQUEST",ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiGreska> handleOpsta(Exception ex){
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiGreska(500,"INTERNAL_SERVER_ERROR","Interna greska."));

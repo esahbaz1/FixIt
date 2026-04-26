@@ -1,6 +1,8 @@
 package ba.etf.fixit.reportservice.controller;
 
+import ba.etf.fixit.reportservice.client.UserServiceKlijent;
 import ba.etf.fixit.reportservice.dto.KomentarRequestDTO;
+import ba.etf.fixit.reportservice.dto.KorisnikDTO;
 import ba.etf.fixit.reportservice.dto.PrijavaRequestDTO;
 import ba.etf.fixit.reportservice.model.Kategorija;
 import ba.etf.fixit.reportservice.model.PrioritetPrijave;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,6 +31,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,6 +56,8 @@ class PrijavaControllerTest {
     @Autowired private HistorijaPrijaveRepository historijaRepo;
     @Autowired private ValidacijaRepository validacijaRepo;
 
+    @MockBean private UserServiceKlijent userServiceKlijent;
+
     private Long kategorijaId;
 
     @BeforeEach
@@ -71,6 +78,9 @@ class PrijavaControllerTest {
         statusiRepo.save(new Statusi(null, "Rijeseno", "Zavrseno"));
         Kategorija k = kategorijaRepo.save(new Kategorija(null, "Put/cesta", "Ostecenja cesta", 1L));
         kategorijaId = k.getId();
+
+        KorisnikDTO aktivanKorisnik = new KorisnikDTO(1L, "Test", "Korisnik", "test@test.ba", "GRADJANIN", true);
+        when(userServiceKlijent.validirajKorisnika(anyLong())).thenReturn(aktivanKorisnik);
     }
 
     private PrijavaRequestDTO validPrijavaDto(String naslov) {
@@ -372,5 +382,47 @@ class PrijavaControllerTest {
                         .content(objectMapper.writeValueAsString(komentar)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+    }
+
+
+    @Test
+    void kreirajPrijavu_korisnikNijePronadjen_vraca404() throws Exception {
+        when(userServiceKlijent.validirajKorisnika(999L))
+                .thenThrow(new UserServiceKlijent.KorisnikNijePronadjenException("Korisnik 999 nije pronadjen"));
+
+        PrijavaRequestDTO dto = validPrijavaDto("Test nepostojeci korisnik");
+        dto.setKorisnikId(999L);
+
+        mockMvc.perform(post("/api/prijave")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("KORISNIK_NOT_FOUND"));
+    }
+
+    @Test
+    void kreirajPrijavu_korisnikNijeAktivan_vraca422() throws Exception {
+        when(userServiceKlijent.validirajKorisnika(2L))
+                .thenThrow(new UserServiceKlijent.KorisnikNijeAktivanException("Korisnik 2 je deaktiviran"));
+
+        PrijavaRequestDTO dto = validPrijavaDto("Test neaktivan korisnik");
+        dto.setKorisnikId(2L);
+
+        mockMvc.perform(post("/api/prijave")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.greska").value("KORISNIK_NIJE_AKTIVAN"));
+    }
+
+    @Test
+    void kreirajPrijavu_userServiceNedostupan_gracefulDegradation_vraca201() throws Exception {
+        when(userServiceKlijent.validirajKorisnika(anyLong())).thenReturn(null);
+
+        mockMvc.perform(post("/api/prijave")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validPrijavaDto("Test graceful"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.naslov").value("Test graceful"));
     }
 }
