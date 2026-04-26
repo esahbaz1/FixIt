@@ -1,8 +1,11 @@
 package ba.etf.fixit.reportservice.service;
+import ba.etf.fixit.reportservice.client.UserServiceKlijent;
 import ba.etf.fixit.reportservice.dto.*;
 import ba.etf.fixit.reportservice.exception.ResourceNotFoundException;
 import ba.etf.fixit.reportservice.model.*;
 import ba.etf.fixit.reportservice.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,20 +17,26 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class PrijavaService {
+
+    private static final Logger log = LoggerFactory.getLogger(PrijavaService.class);
+
     private final PrijavaRepository prijavaRepo;
     private final KategorijaRepository kategorijaRepo;
     private final StatusiRepository statusiRepo;
     private final TipPromjeneRepository tipPromjeneRepo;
+    private final UserServiceKlijent userServiceKlijent;
 
     public PrijavaService(
             PrijavaRepository prijavaRepo,
             KategorijaRepository kategorijaRepo,
             StatusiRepository statusiRepo,
-            TipPromjeneRepository tipPromjeneRepo) {
+            TipPromjeneRepository tipPromjeneRepo,
+            UserServiceKlijent userServiceKlijent) {
         this.prijavaRepo = prijavaRepo;
         this.kategorijaRepo = kategorijaRepo;
         this.statusiRepo = statusiRepo;
         this.tipPromjeneRepo = tipPromjeneRepo;
+        this.userServiceKlijent = userServiceKlijent;
     }
 
     public List<PrijavaResponseDTO> dohvatiSve(){
@@ -39,6 +48,9 @@ public class PrijavaService {
     }
 
     public PrijavaResponseDTO kreiraj(PrijavaRequestDTO dto){
+        userServiceKlijent.validirajKorisnika(dto.getKorisnikId());
+        log.info("Kreiranje prijave za korisnikId={}", dto.getKorisnikId());
+
         Kategorija kat = kategorijaRepo.findById(dto.getKategorijaId())
                 .orElseThrow(()->new ResourceNotFoundException("Kategorija "+dto.getKategorijaId()+" nije pronadjena"));
         Statusi status = statusiRepo.findByNaziv("Novo")
@@ -129,8 +141,6 @@ public List<PrijavaResponseDTO> hitneSaPrekoracenimRokom() {
             .map(this::mapToResponse)
             .collect(Collectors.toList());
 }
-
-
 
     public PrijavaResponseDTO mapToResponse(Prijava p){
         PrijavaResponseDTO dto = new PrijavaResponseDTO();
