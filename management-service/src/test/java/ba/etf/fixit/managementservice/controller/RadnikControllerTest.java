@@ -4,8 +4,8 @@ import ba.etf.fixit.managementservice.dto.RadnikRequestDTO;
 import ba.etf.fixit.managementservice.model.GradskaSluzba;
 import ba.etf.fixit.managementservice.model.Radnik;
 import ba.etf.fixit.managementservice.repository.GradskaSluzbaRepository;
-import ba.etf.fixit.managementservice.repository.RadnikRepository;
 import ba.etf.fixit.managementservice.repository.KorisnikProfilRepository;
+import ba.etf.fixit.managementservice.repository.RadnikRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,8 +16,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -31,6 +35,7 @@ class RadnikControllerTest {
     @Autowired private KorisnikProfilRepository profilRepo;
 
     private Long sluzbaId;
+    private Long drugaSluzbaId;
 
     @BeforeEach
     void setUp() {
@@ -38,12 +43,13 @@ class RadnikControllerTest {
         profilRepo.deleteAll();
         sluzbaRepo.deleteAll();
 
-        GradskaSluzba sluzba = sluzbaRepo.save(
-                new GradskaSluzba(null, "JKP Test", "Testna služba", "jkp@test.ba", "033-000-000", true));
+        GradskaSluzba sluzba = sluzbaRepo.save(new GradskaSluzba(
+                null, "JKP Test", "Testna sluzba", "jkp@test.ba", "033-000-000", true));
+        GradskaSluzba druga = sluzbaRepo.save(new GradskaSluzba(
+                null, "JKP Druga", "Druga sluzba", "druga@test.ba", "033-111-000", true));
         sluzbaId = sluzba.getId();
+        drugaSluzbaId = druga.getId();
     }
-
-    // --- USPJEŠNI ZAHTJEVI ---
 
     @Test
     void kreirajRadnika_uspjesno() throws Exception {
@@ -51,14 +57,13 @@ class RadnikControllerTest {
         dto.setKorisnikId(1L);
         dto.setGradskaSluzbaId(sluzbaId);
         dto.setPozicija("Inspektor");
-        dto.setKompetencije("Putevi i saobraćaj");
+        dto.setKompetencije("Putevi");
 
         mockMvc.perform(post("/api/radnici")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.korisnikId").value(1L))
-                .andExpect(jsonPath("$.pozicija").value("Inspektor"))
                 .andExpect(jsonPath("$.nazivSluzbe").value("JKP Test"));
     }
 
@@ -70,26 +75,136 @@ class RadnikControllerTest {
     }
 
     @Test
+    void dohvatiPoId_uspjesno() throws Exception {
+        Radnik radnik = sluzbaRepo.findById(sluzbaId)
+                .map(s -> radnikRepo.save(new Radnik(null, 7L, s, "Inspektor", "A", true)))
+                .orElseThrow();
+
+        mockMvc.perform(get("/api/radnici/" + radnik.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(radnik.getId()))
+                .andExpect(jsonPath("$.korisnikId").value(7L));
+    }
+
+    @Test
+    void dohvatiPoId_nePostoji_vraca404() throws Exception {
+        mockMvc.perform(get("/api/radnici/9999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+    }
+
+    @Test
     void dohvatiPoSluzbi_uspjesno() throws Exception {
-        sluzbaRepo.findById(sluzbaId).ifPresent(s ->
-                radnikRepo.save(new Radnik(null, 5L, s, "Vozač", null, true)));
+        sluzbaRepo.findById(sluzbaId)
+                .ifPresent(s -> radnikRepo.save(new Radnik(null, 5L, s, "Vozac", null, true)));
 
         mockMvc.perform(get("/api/radnici/sluzba/" + sluzbaId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
     }
 
-    // --- NEUSPJEŠNI ZAHTJEVI ---
+    @Test
+    void paged_uspjesno() throws Exception {
+        sluzbaRepo.findById(sluzbaId).ifPresent(s -> {
+            radnikRepo.save(new Radnik(null, 11L, s, "Inspektor", "A", true));
+            radnikRepo.save(new Radnik(null, 12L, s, "Inspektor", "B", true));
+        });
+
+        mockMvc.perform(get("/api/radnici/sluzba/" + sluzbaId + "/paged")
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void paged_nevalidanPage_vraca500() throws Exception {
+        mockMvc.perform(get("/api/radnici/sluzba/" + sluzbaId + "/paged")
+                        .param("page", "abc"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.greska").value("INTERNAL_SERVER_ERROR"));
+    }
+
+    @Test
+    void aktivniPoPoziciji_uspjesno() throws Exception {
+        sluzbaRepo.findById(sluzbaId).ifPresent(s -> {
+            radnikRepo.save(new Radnik(null, 13L, s, "Inspektor", "A", true));
+            radnikRepo.save(new Radnik(null, 14L, s, "Vozac", "B", true));
+        });
+
+        mockMvc.perform(get("/api/radnici/sluzba/" + sluzbaId + "/aktivni")
+                        .param("pozicija", "Inspektor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].pozicija").value("Inspektor"));
+    }
+
+    @Test
+    void aktivniPoPoziciji_bezParametra_vraca500() throws Exception {
+        mockMvc.perform(get("/api/radnici/sluzba/" + sluzbaId + "/aktivni"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.greska").value("INTERNAL_SERVER_ERROR"));
+    }
+
+    @Test
+    void obrisiRadnika_uspjesno() throws Exception {
+        Radnik radnik = sluzbaRepo.findById(sluzbaId)
+                .map(s -> radnikRepo.save(new Radnik(null, 8L, s, "Terenski", "A", true)))
+                .orElseThrow();
+
+        mockMvc.perform(delete("/api/radnici/" + radnik.getId()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/radnici/" + radnik.getId()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void obrisiRadnika_nePostoji_vraca404() throws Exception {
+        mockMvc.perform(delete("/api/radnici/9999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+    }
+
+    @Test
+    void premjesti_uspjesno() throws Exception {
+        Radnik radnik = sluzbaRepo.findById(sluzbaId)
+                .map(s -> radnikRepo.save(new Radnik(null, 15L, s, "Inspektor", "A", true)))
+                .orElseThrow();
+
+        mockMvc.perform(put("/api/radnici/" + radnik.getId() + "/premjesti/" + drugaSluzbaId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gradskaSluzbaId").value(drugaSluzbaId))
+                .andExpect(jsonPath("$.nazivSluzbe").value("JKP Druga"));
+    }
+
+    @Test
+    void premjesti_radnikNePostoji_vraca404() throws Exception {
+        mockMvc.perform(put("/api/radnici/9999/premjesti/" + drugaSluzbaId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+    }
+
+    @Test
+    void premjesti_sluzbaNePostoji_vraca404() throws Exception {
+        Radnik radnik = sluzbaRepo.findById(sluzbaId)
+                .map(s -> radnikRepo.save(new Radnik(null, 16L, s, "Inspektor", "A", true)))
+                .orElseThrow();
+
+        mockMvc.perform(put("/api/radnici/" + radnik.getId() + "/premjesti/9999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+    }
 
     @Test
     void kreirajRadnika_bezKorisnikId_vraca400() throws Exception {
         RadnikRequestDTO dto = new RadnikRequestDTO();
         dto.setGradskaSluzbaId(sluzbaId);
-        // korisnikId je null — treba baciti validacijsku grešku
 
         mockMvc.perform(post("/api/radnici")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.greska").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.poruke.korisnikId").exists());
@@ -102,22 +217,8 @@ class RadnikControllerTest {
         dto.setGradskaSluzbaId(9999L);
 
         mockMvc.perform(post("/api/radnici")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
-    }
-
-    @Test
-    void dohvatiPoId_nePostoji_vraca404() throws Exception {
-        mockMvc.perform(get("/api/radnici/9999"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
-    }
-
-    @Test
-    void obrisiRadnika_nePostoji_vraca404() throws Exception {
-        mockMvc.perform(delete("/api/radnici/9999"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
     }

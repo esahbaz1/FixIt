@@ -1,6 +1,7 @@
 package ba.etf.fixit.managementservice.controller;
 
 import ba.etf.fixit.managementservice.dto.GradskaSluzbaRequestDTO;
+import ba.etf.fixit.managementservice.model.GradskaSluzba;
 import ba.etf.fixit.managementservice.repository.GradskaSluzbaRepository;
 import ba.etf.fixit.managementservice.repository.RadnikRepository;
 import ba.etf.fixit.managementservice.repository.KorisnikProfilRepository;
@@ -71,9 +72,70 @@ class GradskaSluzbaControllerTest {
     }
 
     @Test
+    void dohvatiPoId_uspjesno() throws Exception {
+        GradskaSluzba sluzba = repo.save(new GradskaSluzba(
+                null, "Vodovod", "Opis", "voda@test.ba", "033-123-123", true));
+
+        mockMvc.perform(get("/api/gradske-sluzbe/" + sluzba.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(sluzba.getId()))
+                .andExpect(jsonPath("$.naziv").value("Vodovod"));
+    }
+
+    @Test
     void dohvatiSve_uspjesno() throws Exception {
         mockMvc.perform(get("/api/gradske-sluzbe"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void azuriraj_uspjesno() throws Exception {
+        GradskaSluzba sluzba = repo.save(new GradskaSluzba(
+                null, "Stari naziv", "Opis", "stari@test.ba", "033-111-111", true));
+
+        GradskaSluzbaRequestDTO dto = new GradskaSluzbaRequestDTO();
+        dto.setNaziv("Novi naziv");
+        dto.setOpis("Novi opis");
+        dto.setKontaktEmail("novi@test.ba");
+        dto.setKontaktTelefon("033-222-222");
+
+        mockMvc.perform(put("/api/gradske-sluzbe/" + sluzba.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.naziv").value("Novi naziv"))
+                .andExpect(jsonPath("$.kontaktEmail").value("novi@test.ba"));
+    }
+
+    @Test
+    void azuriraj_nePostoji_vraca404() throws Exception {
+        GradskaSluzbaRequestDTO dto = new GradskaSluzbaRequestDTO();
+        dto.setNaziv("Novi naziv");
+
+        mockMvc.perform(put("/api/gradske-sluzbe/9999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+    }
+
+    @Test
+    void obrisi_uspjesno() throws Exception {
+        GradskaSluzba sluzba = repo.save(new GradskaSluzba(
+                null, "Za brisanje", "Opis", "obrisi@test.ba", "033-555-555", true));
+
+        mockMvc.perform(delete("/api/gradske-sluzbe/" + sluzba.getId()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/gradske-sluzbe/" + sluzba.getId()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void obrisi_nePostoji_vraca404() throws Exception {
+        mockMvc.perform(delete("/api/gradske-sluzbe/9999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
     }
 }
