@@ -3,7 +3,6 @@ package ba.etf.fixit.userservice.controller;
 import ba.etf.fixit.userservice.dto.KorisnikBatchRequestDTO;
 import ba.etf.fixit.userservice.dto.LoginRequestDTO;
 import ba.etf.fixit.userservice.dto.RegistracijaRequestDTO;
-import ba.etf.fixit.userservice.model.UlogaKorisnika;
 import ba.etf.fixit.userservice.repository.KorisnikRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,31 +36,32 @@ class KorisnikControllerTest {
         korisnikRepository.deleteAll();
     }
 
-    private RegistracijaRequestDTO validRegistracija(String email, UlogaKorisnika uloga) {
+    // Uloga je uklonjena iz DTO — svaki novi korisnik je automatski GRADJANIN
+    private RegistracijaRequestDTO validRegistracija(String email) {
         RegistracijaRequestDTO dto = new RegistracijaRequestDTO();
         dto.setIme("Ana");
         dto.setPrezime("Simic");
         dto.setEmail(email);
         dto.setLozinka("Lozinka123!");
-        dto.setUloga(uloga);
         return dto;
     }
 
     @Test
     void registracija_uspjesno() throws Exception {
-        RegistracijaRequestDTO dto = validRegistracija("ana@test.ba", UlogaKorisnika.GRADJANIN);
+        RegistracijaRequestDTO dto = validRegistracija("ana@test.ba");
 
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email").value("ana@test.ba"))
+                .andExpect(jsonPath("$.uloga").value("GRADJANIN"))
                 .andExpect(jsonPath("$.lozinka").doesNotExist());
     }
 
     @Test
     void registracija_nevalidanEmail_vraca400() throws Exception {
-        RegistracijaRequestDTO dto = validRegistracija("NIJE_EMAIL", UlogaKorisnika.GRADJANIN);
+        RegistracijaRequestDTO dto = validRegistracija("NIJE_EMAIL");
 
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,7 +73,7 @@ class KorisnikControllerTest {
 
     @Test
     void registracija_kratkaLozinka_vraca400() throws Exception {
-        RegistracijaRequestDTO dto = validRegistracija("ana3@test.ba", UlogaKorisnika.GRADJANIN);
+        RegistracijaRequestDTO dto = validRegistracija("ana3@test.ba");
         dto.setLozinka("123");
 
         mockMvc.perform(post("/api/auth/registracija")
@@ -85,7 +85,7 @@ class KorisnikControllerTest {
 
     @Test
     void registracija_duplikatEmail_vraca409() throws Exception {
-        RegistracijaRequestDTO dto = validRegistracija("duplikat@test.ba", UlogaKorisnika.GRADJANIN);
+        RegistracijaRequestDTO dto = validRegistracija("duplikat@test.ba");
 
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -101,7 +101,7 @@ class KorisnikControllerTest {
 
     @Test
     void prijava_uspjesno() throws Exception {
-        RegistracijaRequestDTO reg = validRegistracija("ana2@test.ba", UlogaKorisnika.GRADJANIN);
+        RegistracijaRequestDTO reg = validRegistracija("ana2@test.ba");
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reg)))
@@ -115,12 +115,14 @@ class KorisnikControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(login)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.poruka").value("Prijava uspjesna"));
+                .andExpect(jsonPath("$.poruka").value("Prijava uspjesna"))
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.refreshToken").exists());
     }
 
     @Test
     void prijava_pogresnaLozinka_vraca404() throws Exception {
-        RegistracijaRequestDTO reg = validRegistracija("ana4@test.ba", UlogaKorisnika.GRADJANIN);
+        RegistracijaRequestDTO reg = validRegistracija("ana4@test.ba");
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reg)))
@@ -139,14 +141,15 @@ class KorisnikControllerTest {
 
     @Test
     void dohvatiSve_uspjesno() throws Exception {
-        mockMvc.perform(get("/api/korisnici"))
+        mockMvc.perform(get("/api/korisnici")
+                        .header("X-Gateway-Secret", "local-dev-secret"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
     }
 
     @Test
     void dohvatiPoId_uspjesno() throws Exception {
-        RegistracijaRequestDTO dto = validRegistracija("id@test.ba", UlogaKorisnika.GRADJANIN);
+        RegistracijaRequestDTO dto = validRegistracija("id@test.ba");
         String response = mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
@@ -154,7 +157,8 @@ class KorisnikControllerTest {
                 .andReturn().getResponse().getContentAsString();
         Long id = objectMapper.readTree(response).get("id").asLong();
 
-        mockMvc.perform(get("/api/korisnici/" + id))
+        mockMvc.perform(get("/api/korisnici/" + id)
+                        .header("X-Gateway-Secret", "local-dev-secret"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.email").value("id@test.ba"));
@@ -162,14 +166,15 @@ class KorisnikControllerTest {
 
     @Test
     void dohvatiPoId_nePostoji_vraca404() throws Exception {
-        mockMvc.perform(get("/api/korisnici/9999"))
+        mockMvc.perform(get("/api/korisnici/9999")
+                        .header("X-Gateway-Secret", "local-dev-secret"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
     }
 
     @Test
-    void obrisi_uspjesno() throws Exception {
-        RegistracijaRequestDTO dto = validRegistracija("delete@test.ba", UlogaKorisnika.GRADJANIN);
+    void obrisi_kaAdmin_uspjesno() throws Exception {
+        RegistracijaRequestDTO dto = validRegistracija("delete@test.ba");
         String response = mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
@@ -177,16 +182,38 @@ class KorisnikControllerTest {
                 .andReturn().getResponse().getContentAsString();
         Long id = objectMapper.readTree(response).get("id").asLong();
 
-        mockMvc.perform(delete("/api/korisnici/" + id))
+        mockMvc.perform(delete("/api/korisnici/" + id)
+                        .header("X-Gateway-Secret", "local-dev-secret")
+                        .header("X-Korisnik-Uloga", "ADMIN"))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/korisnici/" + id))
+        mockMvc.perform(get("/api/korisnici/" + id)
+                        .header("X-Gateway-Secret", "local-dev-secret"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
+    void obrisi_kaGradjanin_vraca403() throws Exception {
+        RegistracijaRequestDTO dto = validRegistracija("delete2@test.ba");
+        String response = mockMvc.perform(post("/api/auth/registracija")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Long id = objectMapper.readTree(response).get("id").asLong();
+
+        mockMvc.perform(delete("/api/korisnici/" + id)
+                        .header("X-Gateway-Secret", "local-dev-secret")
+                        .header("X-Korisnik-Uloga", "GRADJANIN"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.greska").value("FORBIDDEN"));
+    }
+
+    @Test
     void obrisi_nePostoji_vraca404() throws Exception {
-        mockMvc.perform(delete("/api/korisnici/9999"))
+        mockMvc.perform(delete("/api/korisnici/9999")
+                        .header("X-Gateway-Secret", "local-dev-secret")
+                        .header("X-Korisnik-Uloga", "ADMIN"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
     }
@@ -194,6 +221,7 @@ class KorisnikControllerTest {
     @Test
     void dohvatiSvePaged_uspjesno() throws Exception {
         mockMvc.perform(get("/api/korisnici/paged")
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .param("page", "0")
                         .param("size", "5")
                         .param("sortBy", "datumKreiranja"))
@@ -204,6 +232,7 @@ class KorisnikControllerTest {
     @Test
     void dohvatiSvePaged_nevalidanPage_vraca500() throws Exception {
         mockMvc.perform(get("/api/korisnici/paged")
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .param("page", "abc"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.greska").value("INTERNAL_SERVER_ERROR"));
@@ -213,12 +242,14 @@ class KorisnikControllerTest {
     void batchRegistracija_uspjesno() throws Exception {
         KorisnikBatchRequestDTO request = new KorisnikBatchRequestDTO();
         request.setKorisnici(List.of(
-                validRegistracija("batch1@test.ba", UlogaKorisnika.GRADJANIN),
-                validRegistracija("batch2@test.ba", UlogaKorisnika.RADNIK)
+                validRegistracija("batch1@test.ba"),
+                validRegistracija("batch2@test.ba")
         ));
 
         mockMvc.perform(post("/api/korisnici/batch")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
+                        .header("X-Korisnik-Uloga", "ADMIN")
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.length()").value(2));
@@ -227,15 +258,19 @@ class KorisnikControllerTest {
     @Test
     void batchRegistracija_duplikat_vraca409() throws Exception {
         KorisnikBatchRequestDTO request = new KorisnikBatchRequestDTO();
-        request.setKorisnici(List.of(validRegistracija("dupli-batch@test.ba", UlogaKorisnika.GRADJANIN)));
+        request.setKorisnici(List.of(validRegistracija("dupli-batch@test.ba")));
 
         mockMvc.perform(post("/api/korisnici/batch")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
+                        .header("X-Korisnik-Uloga", "ADMIN")
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/korisnici/batch")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
+                        .header("X-Korisnik-Uloga", "ADMIN")
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.greska").value("CONFLICT"));
@@ -246,18 +281,22 @@ class KorisnikControllerTest {
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                validRegistracija("aktivni@test.ba", UlogaKorisnika.RADNIK))))
+                                validRegistracija("aktivni@test.ba"))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/korisnici/aktivni").param("uloga", "RADNIK"))
+        mockMvc.perform(get("/api/korisnici/aktivni")
+                        .header("X-Gateway-Secret", "local-dev-secret")
+                        .param("uloga", "GRADJANIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].uloga").value("RADNIK"));
+                .andExpect(jsonPath("$[0].uloga").value("GRADJANIN"));
     }
 
     @Test
     void aktivniPoUlozi_nevalidnaUloga_vraca500() throws Exception {
-        mockMvc.perform(get("/api/korisnici/aktivni").param("uloga", "NEPOSTOJECA"))
+        mockMvc.perform(get("/api/korisnici/aktivni")
+                        .header("X-Gateway-Secret", "local-dev-secret")
+                        .param("uloga", "NEPOSTOJECA"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.greska").value("INTERNAL_SERVER_ERROR"));
     }
