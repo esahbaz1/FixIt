@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,6 +35,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiGreska> handleDuplikat(DuplikatException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiGreska(409, "CONFLICT", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiGreska> handleForbidden(ForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiGreska(403, "FORBIDDEN", ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
