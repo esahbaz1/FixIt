@@ -3,36 +3,43 @@ package ba.etf.fixit.apigateway.util;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Date;
 
 /**
  * Pomocna klasa za rad sa JWT tokenima na nivou gatewaya.
- * Gateway samo VERIFICIRA access tokene — ne kreira ih.
- * Kreiranje tokena vrsi se iskljucivo u user-service.
+ *
+ * Gateway SAMO VERIFICIRA access tokene — nikad ih ne kreira.
+ * Kreiranje tokena vrsi se iskljucivo u user-service pomocu privatnog kljuca.
+ *
+ * Gateway ima samo JAVNI kljuc (RS256) — kompromitovanje gatewaya ne daje
+ * mogucnost kreiranja laznih tokena.
  */
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    private final PublicKey publicKey;
 
-    private Key getKey() {
-        byte[] keyBytes = secret.getBytes();
-        if (keyBytes.length < 32) {
-            throw new IllegalStateException(
-                    "JWT tajni kljuc mora imati najmanje 32 karaktera");
+    public JwtUtil(@Value("${jwt.public-key}") String publicKeyBase64) {
+        try {
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            byte[] keyBytes = Base64.getDecoder().decode(
+                    publicKeyBase64.replaceAll("-----.*-----", "").replaceAll("\\s", ""));
+            this.publicKey = kf.generatePublic(new X509EncodedKeySpec(keyBytes));
+        } catch (Exception e) {
+            throw new IllegalStateException("Ne mogu ucitati RSA javni kljuc za JWT verifikaciju: " + e.getMessage(), e);
         }
-        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public Claims parsirajToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getKey())
+                .setSigningKey(publicKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

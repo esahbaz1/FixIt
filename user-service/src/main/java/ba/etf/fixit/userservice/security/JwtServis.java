@@ -5,32 +5,38 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Kreira i validira JWT tokene.
+ * Kreira i validira JWT tokene pomocu RSA asimetricne kriptografije.
+ *
+ * SIGURNOST:
+ *  - user-service ima PRIVATNI kljuc i JEDINI moze potpisivati tokene.
+ *  - api-gateway ima samo JAVNI kljuc i moze SAMO verificirati potpis.
+ *  - Nijedan drugi mikroservis ne treba nikakav JWT kljuc.
  *
  * Access token  : 1h, nosi korisnicke podatke, salje se uz svaki zahtjev
  * Refresh token : 7 dana, koristi se SAMO za dobivanje novog access tokena
  *
  * Logout: refresh token se stavlja na in-memory blacklistu.
- * Access token ostaje validan do isteka (max 1h) — svjesna odluka jer
- * invalidacija access tokena zahtijeva Redis sto dodaje infrastrukturnu
- * zavisnost koja nije opravdana za aplikaciju ovog tipa.
  */
 @Component
 public class JwtServis {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    private final PrivateKey privateKey;
+    private final PublicKey publicKey;
 
     @Value("${jwt.expiracija-ms}")
     private long expirationMs;
@@ -41,8 +47,23 @@ public class JwtServis {
     private final Set<String> refreshTokenBlacklist =
             Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    private Key getKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+    public JwtServis(
+            @Value("${jwt.private-key}") String privateKeyBase64,
+            @Value("${jwt.public-key}") String publicKeyBase64) {
+        try {
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+
+            byte[] privateBytes = Base64.getDecoder().decode(
+                    privateKeyBase64.replaceAll("-----.*-----", "").replaceAll("\\s", ""));
+            this.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(privateBytes));
+
+            byte[] publicBytes = Base64.getDecoder().decode(
+                    publicKeyBase64.replaceAll("-----.*-----", "").replaceAll("\\s", ""));
+            this.publicKey = kf.generatePublic(new X509EncodedKeySpec(publicBytes));
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Ne mogu ucitati RSA kljuceve za JWT: " + e.getMessage(), e);
+        }
     }
 
     public String kreirajToken(Korisnik korisnik) {
@@ -56,7 +77,7 @@ public class JwtServis {
                 .claim("tip", "access")
                 .setIssuedAt(sada)
                 .setExpiration(new Date(sada.getTime() + expirationMs))
-                .signWith(getKey(), SignatureAlgorithm.HS256)
+                .signWith(privateKey, SignatureAlgorithm.RS256)
                 .compact();
     }
 
@@ -68,13 +89,13 @@ public class JwtServis {
                 .claim("tip", "refresh")
                 .setIssuedAt(sada)
                 .setExpiration(new Date(sada.getTime() + refreshExpirationMs))
-                .signWith(getKey(), SignatureAlgorithm.HS256)
+                .signWith(privateKey, SignatureAlgorithm.RS256)
                 .compact();
     }
 
     public Claims parsirajToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getKey())
+                .setSigningKey(publicKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
