@@ -33,7 +33,7 @@ build/
 # Windows system files
 Desktop.ini
 
-# OneDrive / user stvari (VAŽNO za tvoj slučaj)
+# OneDrive / user stvari 
 OneDrive/
 AppData/
 Downloads/
@@ -43,3 +43,6 @@ Pictures/
 # Misc
 *.tmp
 *.swp
+
+*.pem
+.env
