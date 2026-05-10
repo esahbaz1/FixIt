@@ -1,6 +1,7 @@
 package ba.etf.fixit.userservice.controller;
 
 import ba.etf.fixit.userservice.dto.*;
+import ba.etf.fixit.userservice.dto.OdjavaRequestDTO;
 import ba.etf.fixit.userservice.exception.ForbiddenException;
 import ba.etf.fixit.userservice.exception.ResourceNotFoundException;
 import ba.etf.fixit.userservice.model.UlogaKorisnika;
@@ -43,8 +44,8 @@ public class KorisnikController {
 
     @PostMapping("/api/auth/odjava")
     public ResponseEntity<Void> odjava(
-            @Valid @RequestBody RefreshTokenRequestDTO dto) {
-        korisnikService.odjava(dto.getRefreshToken());
+            @Valid @RequestBody OdjavaRequestDTO dto) {
+        korisnikService.odjava(dto.getRefreshToken(), dto.getAccessToken());
         return ResponseEntity.noContent().build();
     }
 
