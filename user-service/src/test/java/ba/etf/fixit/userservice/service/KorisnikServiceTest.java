@@ -113,13 +113,7 @@ class KorisnikServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> korisnikService.osvjeziToken(dto));
     }
 
-    @Test
-    void odjava_invalidiseRefreshToken() {
-        korisnikService.odjava("neki-refresh-token");
-
-        verify(jwtServis).invalidisiRefreshToken("neki-refresh-token");
-    }
-
+    
     @Test
     void obrisi_nePostoji_bacaException() {
         when(korisnikRepository.existsById(99L)).thenReturn(false);

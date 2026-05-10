@@ -45,4 +45,7 @@ Pictures/
 *.swp
 
 *.pem
-.env
+.env-e 
+# Env fajlovi
+local.env
+*.env

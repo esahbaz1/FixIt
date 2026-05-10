@@ -40,9 +40,7 @@ public class KorisnikService {
         return mapToResponse(nadjiKorisnika(id));
     }
 
-    /**
-     * Uloga se ne prima iz zahtjeva — uvijek je GRADJANIN.
-     */
+
     public KorisnikResponseDTO registruj(RegistracijaRequestDTO dto) {
         if (korisnikRepository.existsByEmail(dto.getEmail())) {
             throw new DuplikatException("Korisnik sa emailom '" + dto.getEmail() + "' vec postoji");
@@ -84,9 +82,13 @@ public class KorisnikService {
                 dto.getRefreshToken());
     }
 
-    public void odjava(String refreshToken) {
+   
+    public void odjava(String refreshToken, String accessToken) {
         if (refreshToken != null && !refreshToken.isBlank()) {
             jwtServis.invalidisiRefreshToken(refreshToken);
+        }
+        if (accessToken != null && !accessToken.isBlank()) {
+            jwtServis.invalidisiAccessToken(accessToken);
         }
     }
 
