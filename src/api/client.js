@@ -1,16 +1,21 @@
-export const API_BASE = "http://localhost:8080";
+export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8080";
 
 // ─── Token Storage ─────────────────────────────────────────────────────────
 // Access token čuvan u memoriji (ne localStorage) radi XSS zaštite.
+// Refresh token čuva se u sessionStorage kako bi preživio refresh stranice (UX-01 / CQ-04).
 let _accessToken = null;
-let _refreshToken = null;
 let _refreshPromise = null;
 let _korisnikUloga = null;
 let _korisnikId = null;
 
+const REFRESH_TOKEN_KEY = "fixit_refresh_token";
+const USER_KEY = "fixit_user";
+
 export function setTokens(access, refresh) {
   _accessToken = access;
-  if (refresh !== undefined) _refreshToken = refresh;
+  if (refresh !== undefined) {
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, refresh);
+  }
 }
 
 export function setKorisnikKontekst(uloga, id) {
@@ -20,25 +25,47 @@ export function setKorisnikKontekst(uloga, id) {
 
 export function clearTokens() {
   _accessToken = null;
-  _refreshToken = null;
   _korisnikUloga = null;
   _korisnikId = null;
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
 }
 
 export function getAccessToken() { return _accessToken; }
 
+// CQ-04 / UX-01: Pomoćne funkcije za perzistenciju korisničkih podataka u sessionStorage
+export function saveUserToStorage(userData) {
+  sessionStorage.setItem(USER_KEY, JSON.stringify(userData));
+}
+
+export function loadUserFromStorage() {
+  try {
+    const raw = sessionStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function loadRefreshTokenFromStorage() {
+  return sessionStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
 // ─── Auto-refresh mehanizam ─────────────────────────────────────────────────
 async function doRefresh() {
-  if (!_refreshToken) throw new Error("No refresh token");
+  const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!refreshToken) throw new Error("No refresh token");
   const res = await fetch(`${API_BASE}/api/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken: _refreshToken }),
+    body: JSON.stringify({ refreshToken }),
   });
   if (!res.ok) throw new Error("Refresh failed");
   const data = await res.json();
   _accessToken = data.token;
-  if (data.refreshToken) _refreshToken = data.refreshToken;
+  if (data.refreshToken) {
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+  }
   return data.token;
 }
 
@@ -47,6 +74,23 @@ async function refreshAccessToken() {
     _refreshPromise = doRefresh().finally(() => { _refreshPromise = null; });
   }
   return _refreshPromise;
+}
+
+// ─── HTTP status → korisnička poruka greške (UX-02) ────────────────────────
+export function friendlyError(status, fallbackMessage) {
+  if (status === 500 || status === 503) {
+    return "Sistem je trenutno nedostupan. Pokušajte ponovo za nekoliko minuta.";
+  }
+  if (status === 401) {
+    return "Niste autorizovani. Prijavite se ponovo.";
+  }
+  if (status === 403) {
+    return "Nemate dozvolu za ovu akciju.";
+  }
+  if (status === 404) {
+    return "Traženi resurs nije pronađen.";
+  }
+  return fallbackMessage || `Greška (HTTP ${status})`;
 }
 
 // ─── Glavni API klijent ────────────────────────────────────────────────────
@@ -63,7 +107,7 @@ export async function apiCall(path, options = {}, explicitToken = null) {
   let res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   // 401 → pokušaj refresh + retry
-  if (res.status === 401 && !explicitToken && _refreshToken) {
+  if (res.status === 401 && !explicitToken && sessionStorage.getItem(REFRESH_TOKEN_KEY)) {
     try {
       const newToken = await refreshAccessToken();
       headers["Authorization"] = `Bearer ${newToken}`;
@@ -76,8 +120,10 @@ export async function apiCall(path, options = {}, explicitToken = null) {
   }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
-    throw new Error(err.message || err.poruka || err.error || `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+    const rawMsg = body.message || body.poruka || body.error || `HTTP ${res.status}`;
+    // UX-02: prikazujemo korisnički prihvatljive poruke umjesto tehničkih
+    throw new Error(friendlyError(res.status, rawMsg));
   }
   if (res.status === 204) return null;
   return res.json();
@@ -85,14 +131,15 @@ export async function apiCall(path, options = {}, explicitToken = null) {
 
 // ─── Logout sa invalidacijom na serveru ────────────────────────────────────
 export async function apiLogout() {
-  if (_accessToken && _refreshToken) {
+  const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
+  if (_accessToken && refreshToken) {
     await fetch(`${API_BASE}/api/auth/odjava`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${_accessToken}`,
       },
-      body: JSON.stringify({ refreshToken: _refreshToken, accessToken: _accessToken }),
+      body: JSON.stringify({ refreshToken, accessToken: _accessToken }),
     }).catch(() => {});
   }
   clearTokens();

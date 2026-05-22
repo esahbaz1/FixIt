@@ -115,7 +115,7 @@ export default function GlobalStyles() {
       .input-field:hover { border-color: ${T.lineHover}; }
 
       .label {
-        display: block; font-size: 11px; font-weight: 500;
+        display: block; font-size: 12px; font-weight: 500;
         color: ${T.textSub}; letter-spacing: 0.06em;
         text-transform: uppercase; margin-bottom: 6px;
       }
@@ -135,6 +135,47 @@ export default function GlobalStyles() {
       .stat-card:nth-child(5) { animation-delay: 0.20s; }
 
       .divider { width: 1px; height: 16px; background: ${T.line}; flex-shrink: 0; }
+
+      /* ─── UX-04: Responsive grid helper klase ───────────────────────────── */
+      /* Koristite ove klase umjesto inline gridTemplateColumns za responsive podršku */
+
+      .grid-main { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+      .grid-main-wide { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
+      .grid-main-narrow { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+      .grid-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+      .grid-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .grid-cat4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .grid-prio { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+      @media (max-width: 768px) {
+        .grid-main, .grid-main-wide, .grid-main-narrow { grid-template-columns: 1fr; }
+        .grid-stats { grid-template-columns: repeat(2, 1fr); }
+        .grid-meta  { grid-template-columns: repeat(2, 1fr); }
+
+        /* Navbar: smanji padding, sakrij tekst ako nema mjesta */
+        .nav-btn { padding: 6px 8px; font-size: 12px; }
+
+        /* Tabela: smanji padding */
+        .tbl-row { padding: 0 12px; }
+      }
+
+      @media (max-width: 480px) {
+        .grid-stats { grid-template-columns: 1fr; }
+        .grid-meta  { grid-template-columns: 1fr; }
+        .grid-cat4  { grid-template-columns: repeat(2, 1fr); }
+        .grid-prio  { grid-template-columns: 1fr; }
+        .grid-main, .grid-main-wide, .grid-main-narrow { grid-template-columns: 1fr; }
+
+        /* Kompaktniji padding na karticama */
+        .card { border-radius: 8px; }
+      }
+
+      /* UX-05: Osiguravamo minimalni kontrast za label elemente (min 12px) */
+      .label { font-size: 12px; }
+
+      /* UX-05: textMuted na tamnoj pozadini – povećana svjetlina za bolji kontrast */
+      /* Originalna boja #4D7A5C na #132B1E ≈ 3.1:1 – povećano na ~4.6:1 */
+      .text-muted-accessible { color: #6FA882; }
     `}</style>
   );
 }

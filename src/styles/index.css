@@ -16,3 +16,53 @@ html, body {
   display: flex;
   flex-direction: column;
 }
+
+/* ─── UX-04: Responsive breakpoints ──────────────────────────────────────── */
+
+/* Tablet (768px i manje) */
+@media (max-width: 768px) {
+  /* Grids sa dvije kolone → jedna kolona */
+  [style*="gridTemplateColumns: \"1fr 300px\""],
+  [style*="gridTemplateColumns: '1fr 300px'"],
+  [style*="gridTemplateColumns: \"1fr 360px\""],
+  [style*="gridTemplateColumns: '1fr 360px'"],
+  [style*="gridTemplateColumns: \"1fr 280px\""],
+  [style*="gridTemplateColumns: '1fr 280px'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Statistički kartice: 2 kolone umjesto 5 */
+  [style*="gridTemplateColumns: \"repeat(5, 1fr)\""],
+  [style*="gridTemplateColumns: 'repeat(5, 1fr)'"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Meta grid na detail stranici: 2 kolone umjesto 3 */
+  [style*="gridTemplateColumns: \"repeat(3, 1fr)\""],
+  [style*="gridTemplateColumns: 'repeat(3, 1fr)'"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Mobilni (480px i manje) */
+@media (max-width: 480px) {
+  /* Statistički kartice: 1 kolona */
+  [style*="gridTemplateColumns: \"repeat(5, 1fr)\""],
+  [style*="gridTemplateColumns: 'repeat(5, 1fr)'"],
+  [style*="gridTemplateColumns: \"repeat(2, 1fr)\""],
+  [style*="gridTemplateColumns: 'repeat(2, 1fr)'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Meta grid: 1 kolona */
+  [style*="gridTemplateColumns: \"repeat(3, 1fr)\""],
+  [style*="gridTemplateColumns: 'repeat(3, 1fr)'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Kategorije i prioritet dugmad: 2 kolone */
+  [style*="gridTemplateColumns: \"repeat(4, 1fr)\""],
+  [style*="gridTemplateColumns: 'repeat(4, 1fr)'"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

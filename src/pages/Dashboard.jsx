@@ -12,13 +12,19 @@ export default function Dashboard({ setActiveTab }) {
   const [prijave, setPrijave] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
 
   async function loadPrijave(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
+    setError("");
     try {
       const data = await apiCall("/api/prijave");
       setPrijave(Array.isArray(data) ? data : []);
-    } catch {}
+    } catch (err) {
+      // CQ-05: prikazujemo grešku korisniku umjesto tihog ignorisanja
+      console.error("Greška pri učitavanju prijava:", err);
+      setError(err.message || "Sistem je trenutno nedostupan. Pokušajte ponovo za nekoliko minuta.");
+    }
     finally {
       setLoading(false);
       setRefreshing(false);
@@ -97,6 +103,12 @@ export default function Dashboard({ setActiveTab }) {
 
           {loading ? (
             <div style={{ display: "flex", justifyContent: "center", padding: 48 }}><Spinner size={28}/></div>
+          ) : error ? (
+            <div style={{ padding: 48, textAlign: "center" }}>
+              <div style={{ fontSize: 28, opacity: 0.4, marginBottom: 12 }}>⚠</div>
+              <div style={{ color: T.red, fontSize: 13, marginBottom: 16 }}>{error}</div>
+              <button onClick={() => loadPrijave(true)} className="btn-ghost" style={{ fontSize: 12 }}>Pokušaj ponovo</button>
+            </div>
           ) : recent.length === 0 ? (
             <div style={{ padding: 48, textAlign: "center" }}>
               <div style={{ fontSize: 28, opacity: 0.3, marginBottom: 12 }}>◌</div>
