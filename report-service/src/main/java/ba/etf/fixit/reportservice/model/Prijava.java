@@ -1,4 +1,5 @@
 package ba.etf.fixit.reportservice.model;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
@@ -16,6 +17,7 @@ import lombok.ToString;
 @Entity
 @Table(name = "prijava")
 public class Prijava {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -52,6 +54,10 @@ public class Prijava {
 
     @Column(name = "grd_sluzba_id")
     private Long grdSluzbald;
+
+
+    @Column(name = "odgovorno_lice_id")
+    private Long odgovornoLiceId;
 
     @Column(name = "datum_podnosenja", nullable = false, updatable = false)
     private LocalDateTime datumPodnosenja;
