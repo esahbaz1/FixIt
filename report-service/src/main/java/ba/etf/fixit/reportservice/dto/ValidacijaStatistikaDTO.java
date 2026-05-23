@@ -1,0 +1,15 @@
+package ba.etf.fixit.reportservice.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ValidacijaStatistikaDTO {
+    private Long prijavaId;
+    private long brPotvrda;
+    private long brOsporavanja;
+    private long ukupnoGlasova;
+}

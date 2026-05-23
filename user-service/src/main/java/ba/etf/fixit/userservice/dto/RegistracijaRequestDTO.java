@@ -23,9 +23,18 @@ public class RegistracijaRequestDTO {
 
     @Email(message = "Email mora biti u ispravnom formatu")
     @NotBlank(message = "Email ne smije biti prazan")
+    @Pattern(
+        regexp = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$",
+        message = "Email mora sadrzavati valjanu domenu (npr. korisnik@example.com)"
+    )
     private String email;
 
+    
     @NotBlank(message = "Lozinka ne smije biti prazna")
     @Size(min = 8, message = "Lozinka mora imati najmanje 8 karaktera")
+    @Pattern(
+        regexp = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$",
+        message = "Lozinka mora sadrzavati najmanje jedno veliko slovo, jedan broj i jedan specijalni karakter"
+    )
     private String lozinka;
 }
