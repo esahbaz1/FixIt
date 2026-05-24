@@ -26,10 +26,45 @@ export default function PrijavaDetailPage() {
   const [komentarSlanje, setKomentarSlanje] = useState(false);
   const [toast, setToast] = useState(null);
   const [korisnici, setKorisnici] = useState({});
+  const [historija, setHistorija] = useState([]);
+const [historijaLoading, setHistorijaLoading] = useState(false);
 
+const [showInterni, setShowInterni] = useState(false);
+
+const [validacija, setValidacija] = useState({
+  brPotvrda: 0,
+  brOsporavanja: 0,
+  ukupnoGlasova: 0,
+});
+
+const [glasanjeLoading, setGlasanjeLoading] = useState(false);
   const statuses = ["Novo", "Dodijeljeno", "U radu", "Rijeseno", "Zatvoreno"];
 
   useEffect(() => {
+
+    // Historija prijave
+    setHistorijaLoading(true);
+
+    apiCall(`/api/prijave/${id}/historija`)
+      .then((data) => {
+        setHistorija(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        console.error("Greška pri učitavanju historije:", err);
+        setHistorija([]);
+      })
+      .finally(() => setHistorijaLoading(false));
+
+    // Validacija statistika
+    apiCall(`/api/prijave/${id}/validacija`)
+      .then((data) => {
+        setValidacija(data);
+      })
+      .catch((err) => {
+        console.error("Greška validacije:", err);
+      });
+
+
     // Uvijek dohvatamo svježe podatke o prijavi (ID iz URL-a)
     apiCall(`/api/prijave/${id}`)
       .then((p) => setPrijava(p))
@@ -37,7 +72,9 @@ export default function PrijavaDetailPage() {
 
     // Dohvati komentare
     setKomentarLoading(true);
-    apiCall(`/api/prijave/${id}/komentari`)
+    apiCall(showInterni
+    ? `/api/prijave/${id}/komentari/interni`
+    : `/api/prijave/${id}/komentari`)
       .then((data) => {
         const lista = Array.isArray(data) ? data : [];
         setKomentari(lista);
@@ -59,7 +96,7 @@ export default function PrijavaDetailPage() {
         setKomentari([]);
       })
       .finally(() => setKomentarLoading(false));
-  }, [id]);
+  }, [id, showInterni]);
 
   async function handleStatusChange() {
     if (!noviStatus) return;
@@ -84,6 +121,12 @@ export default function PrijavaDetailPage() {
     }
   }
 
+// Historija prijave
+
+
+
+
+
   async function handleKomentar(e) {
     e.preventDefault();
     if (!komentarTekst.trim()) return;
@@ -91,7 +134,11 @@ export default function PrijavaDetailPage() {
     try {
       const novi = await apiCall(`/api/prijave/${prijava.id}/komentari`, {
         method: "POST",
-        body: JSON.stringify({ tekst: komentarTekst, korisnikId: user?.id }),
+       body: JSON.stringify({
+  tekst: komentarTekst,
+  korisnikId: user?.id,
+  interan: showInterni,
+}),
       });
       setKomentari((prev) => [...prev, novi]);
       if (novi.korisnikId && novi.korisnikId !== user?.id && !korisnici[novi.korisnikId]) {
@@ -107,6 +154,44 @@ export default function PrijavaDetailPage() {
       setKomentarSlanje(false);
     }
   }
+async function handleGlasanje(potvrdjeno) {
+  setGlasanjeLoading(true);
+
+  try {
+    await apiCall(`/api/prijave/${prijava.id}/validacija`, {
+      method: "POST",
+      body: JSON.stringify({
+        korisnikId: user?.id,
+        potvrdjeno,
+      }),
+    });
+
+    setToast({
+      msg: potvrdjeno
+        ? "Potvrdili ste prijavljeni problem."
+        : "Osporili ste prijavljeni problem.",
+      type: "success",
+    });
+
+    const novaStatistika = await apiCall(
+      `/api/prijave/${prijava.id}/validacija`
+    );
+
+    setValidacija(novaStatistika);
+
+  } catch (err) {
+    setToast({
+      msg: err.message,
+      type: "error",
+    });
+  } finally {
+    setGlasanjeLoading(false);
+  }
+}
+
+
+
+
 
   const fmt   = (d) => d ? new Date(d).toLocaleDateString("bs") : "—";
   const fmtDt = (d) => d ? new Date(d).toLocaleString("bs") : "—";
@@ -186,6 +271,34 @@ export default function PrijavaDetailPage() {
               <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>Komentari</span>
               <span style={{ fontSize: 11, color: T.textMuted, background: T.bgActive, padding: "1px 7px", borderRadius: 100 }}>{komentari.length}</span>
             </div>
+            {(user?.uloga === "RADNIK" ||
+  user?.uloga === "RUKOVODILAC" ||
+  user?.uloga === "ADMIN") && (
+  <div
+    style={{
+      padding: "12px 24px",
+      borderBottom: `1px solid ${T.line}`,
+      display: "flex",
+      gap: 10,
+    }}
+  >
+    <button
+      className={!showInterni ? "btn-prim" : "btn-ghost"}
+      style={{ fontSize: 12 }}
+      onClick={() => setShowInterni(false)}
+    >
+      Javni
+    </button>
+
+    <button
+      className={showInterni ? "btn-prim" : "btn-ghost"}
+      style={{ fontSize: 12 }}
+      onClick={() => setShowInterni(true)}
+    >
+      Interni
+    </button>
+  </div>
+)}
 
             {komentarLoading ? (
               <div style={{ display: "flex", justifyContent: "center", padding: 32 }}><Spinner /></div>
@@ -207,9 +320,35 @@ export default function PrijavaDetailPage() {
                               ? `${korisnici[k.korisnikId].ime} ${korisnici[k.korisnikId].prezime || ""}`.trim()
                               : `Korisnik #${k.korisnikId}`}
                         </span>
-                        {k.korisnikId === user?.id && (
-                          <span style={{ fontSize: 10, color: "#2ECC71", padding: "1px 6px", borderRadius: 3, background: "rgba(46,204,113,0.1)", border: "1px solid rgba(46,204,113,0.2)" }}>Vi</span>
-                        )}
+                       {k.korisnikId === user?.id && (
+  <span
+    style={{
+      fontSize: 10,
+      color: "#2ECC71",
+      padding: "1px 6px",
+      borderRadius: 3,
+      background: "rgba(46,204,113,0.1)",
+      border: "1px solid rgba(46,204,113,0.2)"
+    }}
+  >
+    Vi
+  </span>
+)}
+
+{k.interan && (
+  <span
+    style={{
+      fontSize: 10,
+      color: "#F39C12",
+      padding: "1px 6px",
+      borderRadius: 3,
+      background: "rgba(243,156,18,0.1)",
+      border: "1px solid rgba(243,156,18,0.2)",
+    }}
+  >
+    Interni
+  </span>
+)}
                       </div>
                       <span style={{ fontSize: 11, color: T.textMuted }}>{k.datumKreiranja ? new Date(k.datumKreiranja).toLocaleString("bs") : "—"}</span>
                     </div>
@@ -235,6 +374,142 @@ export default function PrijavaDetailPage() {
               </form>
             </div>
           </div>
+         
+<div className="card" style={{ overflow: "hidden" }}>
+  <div
+    style={{
+      padding: "16px 24px",
+      borderBottom: `1px solid ${T.line}`,
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+    }}
+  >
+    <Icon.Refresh />
+    <span
+      style={{
+        fontSize: 13,
+        fontWeight: 500,
+        color: T.text,
+      }}
+    >
+      Historija prijave
+    </span>
+  </div>
+
+  {historijaLoading ? (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        padding: 32,
+      }}
+    >
+      <Spinner />
+    </div>
+  ) : historija.length === 0 ? (
+    <div
+      style={{
+        padding: 24,
+        textAlign: "center",
+        color: T.textMuted,
+        fontSize: 13,
+      }}
+    >
+      Nema historije promjena.
+    </div>
+  ) : (
+    <div style={{ padding: "10px 24px 24px" }}>
+      {historija.map((h, i) => (
+        <div
+          key={h.id || i}
+          style={{
+            display: "flex",
+            gap: 14,
+            position: "relative",
+            paddingBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              background: "#2ECC71",
+              marginTop: 4,
+              flexShrink: 0,
+            }}
+          />
+
+          {i < historija.length - 1 && (
+            <div
+              style={{
+                position: "absolute",
+                left: 5,
+                top: 18,
+                width: 2,
+                height: "100%",
+                background: T.line,
+              }}
+            />
+          )}
+
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: T.text,
+                marginBottom: 4,
+              }}
+            >
+              Status promijenjen
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+                marginBottom: 6,
+              }}
+            >
+              <StatusChip status={h.statusIz} />
+
+              <span style={{ color: T.textMuted }}>
+                →
+              </span>
+
+              <StatusChip status={h.statusU} />
+            </div>
+
+            <div
+              style={{
+                fontSize: 12,
+                color: T.textMuted,
+              }}
+            >
+              Korisnik #{h.korisnikId}
+            </div>
+
+            <div
+              style={{
+                fontSize: 11,
+                color: T.textMuted,
+                marginTop: 4,
+              }}
+            >
+              {new Date(h.datumPromjene).toLocaleString("bs")}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+
         </div>
 
         {/* ─── Desna kolona (sidebar) ───────────────────────────── */}
@@ -273,6 +548,120 @@ export default function PrijavaDetailPage() {
               </div>
             ))}
           </div>
+
+          <div className="card" style={{ padding: 22 }}>
+  <div
+    style={{
+      fontSize: 13,
+      fontWeight: 500,
+      color: T.text,
+      marginBottom: 16,
+    }}
+  >
+    Validacija zajednice
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr 1fr",
+      gap: 10,
+      marginBottom: 18,
+    }}
+  >
+    <div
+      style={{
+        background: T.bgRaised,
+        border: `1px solid ${T.line}`,
+        borderRadius: 8,
+        padding: 12,
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: 11, color: T.textMuted }}>
+        Potvrde
+      </div>
+
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 600,
+          color: "#2ECC71",
+        }}
+      >
+        {validacija.brPotvrda || 0}
+      </div>
+    </div>
+
+    <div
+      style={{
+        background: T.bgRaised,
+        border: `1px solid ${T.line}`,
+        borderRadius: 8,
+        padding: 12,
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: 11, color: T.textMuted }}>
+        Osporavanja
+      </div>
+
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 600,
+          color: "#E74C3C",
+        }}
+      >
+        {validacija.brOsporavanja || 0}
+      </div>
+    </div>
+
+    <div
+      style={{
+        background: T.bgRaised,
+        border: `1px solid ${T.line}`,
+        borderRadius: 8,
+        padding: 12,
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: 11, color: T.textMuted }}>
+        Ukupno
+      </div>
+
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 600,
+          color: T.text,
+        }}
+      >
+        {validacija.ukupnoGlasova || 0}
+      </div>
+    </div>
+  </div>
+
+  <div style={{ display: "flex", gap: 10 }}>
+    <button
+      onClick={() => handleGlasanje(true)}
+      disabled={glasanjeLoading}
+      className="btn-prim"
+      style={{ flex: 1 }}
+    >
+      Potvrdi
+    </button>
+
+    <button
+      onClick={() => handleGlasanje(false)}
+      disabled={glasanjeLoading}
+      className="btn-ghost"
+      style={{ flex: 1 }}
+    >
+      Ospori
+    </button>
+  </div>
+</div>
 
           {/* Arhivacija */}
           {(user?.uloga === "RUKOVODILAC" || user?.uloga === "RADNIK" || user?.uloga === "ADMIN") && (
