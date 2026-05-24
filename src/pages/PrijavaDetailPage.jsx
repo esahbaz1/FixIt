@@ -40,7 +40,27 @@ const [validacija, setValidacija] = useState({
 const [glasanjeLoading, setGlasanjeLoading] = useState(false);
   const statuses = ["Novo", "Dodijeljeno", "U radu", "Rijeseno", "Zatvoreno"];
 
+  const [sluzbe, setSluzbe] = useState([]);
+const [radnici, setRadnici] = useState([]);
+
+const [odabranaSluzba, setOdabranaSluzba] = useState("");
+const [odabraniRadnik, setOdabraniRadnik] = useState("");
+
+const [dodjelaLoading, setDodjelaLoading] = useState(false);
+
   useEffect(() => {
+
+    // Dohvati gradske službe
+apiCall("/api/gradske-sluzbe")
+  .then((data) => {
+    console.log("SERVIS ODGOVOR:", data);
+    console.log("JE LI ARRAY:", Array.isArray(data));
+
+    setSluzbe(Array.isArray(data) ? data : []);
+  })
+  .catch((err) => {
+    console.error("GRESKA:", err);
+  });
 
     // Historija prijave
     setHistorijaLoading(true);
@@ -188,7 +208,89 @@ async function handleGlasanje(potvrdjeno) {
     setGlasanjeLoading(false);
   }
 }
+async function handleSluzbaChange(sluzbaId) {
+  setOdabranaSluzba(sluzbaId);
+  setOdabraniRadnik("");
 
+  if (!sluzbaId) {
+    setRadnici([]);
+    return;
+  }
+
+  try {
+    const data = await apiCall(
+      `/api/radnici/sluzba/${sluzbaId}`
+    );
+
+    setRadnici(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error("Greška pri učitavanju radnika:", err);
+    setRadnici([]);
+  }
+}
+async function handleDodjelaSluzbe() {
+  if (!odabranaSluzba) return;
+
+  setDodjelaLoading(true);
+
+  try {
+    await apiCall(
+      `/api/prijave/${prijava.id}/dodjeli-sluzbu?sluzbaId=${odabranaSluzba}`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    setToast({
+      msg: "Prijava uspješno dodijeljena službi.",
+      type: "success",
+    });
+
+    const osvjezena = await apiCall(`/api/prijave/${prijava.id}`);
+
+    setPrijava(osvjezena);
+
+  } catch (err) {
+    setToast({
+      msg: err.message,
+      type: "error",
+    });
+  } finally {
+    setDodjelaLoading(false);
+  }
+}
+
+async function handleDodjelaRadnika() {
+  if (!odabraniRadnik) return;
+
+  setDodjelaLoading(true);
+
+  try {
+    await apiCall(
+      `/api/radnici/${odabraniRadnik}/prijave/${prijava.id}`,
+      {
+        method: "POST",
+      }
+    );
+
+    setToast({
+      msg: "Radnik uspješno dodijeljen prijavi.",
+      type: "success",
+    });
+
+    const osvjezena = await apiCall(`/api/prijave/${prijava.id}`);
+
+    setPrijava(osvjezena);
+
+  } catch (err) {
+    setToast({
+      msg: err.message,
+      type: "error",
+    });
+  } finally {
+    setDodjelaLoading(false);
+  }
+}
 
 
 
@@ -533,6 +635,99 @@ async function handleGlasanje(potvrdjeno) {
               {loading ? <><Spinner size={14} color="#fff" /> Ažuriranje...</> : <><Icon.Refresh /> Ažuriraj status</>}
             </button>
           </div>
+
+          {/* Dodjela službe i radnika */}
+{ (
+  <div className="card" style={{ padding: 22 }}>
+
+    <div
+      style={{
+        fontSize: 13,
+        fontWeight: 500,
+        color: T.text,
+        marginBottom: 18,
+      }}
+    >
+      Dodjela prijave
+    </div>
+
+    {/* SLUŽBA */}
+    <div style={{ marginBottom: 18 }}>
+      <label className="label">
+        Nadležna služba
+      </label>
+
+      <select
+        value={odabranaSluzba}
+        onChange={(e) =>
+          handleSluzbaChange(e.target.value)
+        }
+        className="input-field"
+      >
+        <option value="">
+          Odaberi službu...
+        </option>
+
+        {sluzbe.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.naziv}
+          </option>
+        ))}
+      </select>
+
+      <button
+        onClick={handleDodjelaSluzbe}
+        disabled={!odabranaSluzba || dodjelaLoading}
+        className="btn-prim"
+        style={{
+          width: "100%",
+          marginTop: 10,
+        }}
+      >
+        Dodijeli službu
+      </button>
+    </div>
+
+    {/* RADNIK */}
+    <div>
+      <label className="label">
+        Dodjela radnika
+      </label>
+
+      <select
+        value={odabraniRadnik}
+        onChange={(e) =>
+          setOdabraniRadnik(e.target.value)
+        }
+        className="input-field"
+        disabled={!odabranaSluzba}
+      >
+        <option value="">
+          Odaberi radnika...
+        </option>
+
+        {radnici.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.ime} {r.prezime}
+          </option>
+        ))}
+      </select>
+
+      <button
+        onClick={handleDodjelaRadnika}
+        disabled={!odabraniRadnik || dodjelaLoading}
+        className="btn-prim"
+        style={{
+          width: "100%",
+          marginTop: 10,
+        }}
+      >
+        Dodijeli radnika
+      </button>
+    </div>
+
+  </div>
+)}
 
           {/* Detalji prijave */}
           <div className="card" style={{ padding: 22 }}>
