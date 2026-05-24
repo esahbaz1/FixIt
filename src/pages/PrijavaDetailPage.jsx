@@ -8,15 +8,12 @@ import Toast from "../components/Toast";
 import { StatusChip, PrioChip } from "../components/Chips";
 import Icon from "../components/Icon";
 
-// UX-03: Koristi useParams() za čitanje ID-a iz URL-a (/prijave/:id).
-// URL je bookmarkable i shareable – svaka prijava ima svoju adresu.
+
 export default function PrijavaDetailPage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, showToast } = useAuth();
-
-  // Koristimo state iz navigation ako je dostupan (brže), inače fetchamo
   const [prijava, setPrijava] = useState(location.state?.prijava || null);
   const [noviStatus, setNoviStatus] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,55 +24,89 @@ export default function PrijavaDetailPage() {
   const [toast, setToast] = useState(null);
   const [korisnici, setKorisnici] = useState({});
   const [historija, setHistorija] = useState([]);
-const [historijaLoading, setHistorijaLoading] = useState(false);
+  const [historijaLoading, setHistorijaLoading] = useState(false);
 
-const [showInterni, setShowInterni] = useState(false);
+  const [showInterni, setShowInterni] = useState(false);
 
-const [validacija, setValidacija] = useState({
-  brPotvrda: 0,
-  brOsporavanja: 0,
-  ukupnoGlasova: 0,
-});
+  const [validacija, setValidacija] = useState({
+    brPotvrda: 0,
+    brOsporavanja: 0,
+    ukupnoGlasova: 0,
+  });
 
-const [glasanjeLoading, setGlasanjeLoading] = useState(false);
+  const [glasanjeLoading, setGlasanjeLoading] = useState(false);
   const statuses = ["Novo", "Dodijeljeno", "U radu", "Rijeseno", "Zatvoreno"];
 
   const [sluzbe, setSluzbe] = useState([]);
-const [radnici, setRadnici] = useState([]);
+  const [radnici, setRadnici] = useState([]);
 
-const [odabranaSluzba, setOdabranaSluzba] = useState("");
-const [odabraniRadnik, setOdabraniRadnik] = useState("");
+  const [odabranaSluzba, setOdabranaSluzba] = useState("");
+  const [odabraniRadnik, setOdabraniRadnik] = useState("");
 
-const [dodjelaLoading, setDodjelaLoading] = useState(false);
+  const [dodjelaLoading, setDodjelaLoading] = useState(false);
 
   useEffect(() => {
 
-    // Dohvati gradske službe
-apiCall("/api/gradske-sluzbe")
-  .then((data) => {
-    console.log("SERVIS ODGOVOR:", data);
-    console.log("JE LI ARRAY:", Array.isArray(data));
-
-    setSluzbe(Array.isArray(data) ? data : []);
-  })
-  .catch((err) => {
-    console.error("GRESKA:", err);
-  });
-
-    // Historija prijave
-    setHistorijaLoading(true);
-
-    apiCall(`/api/prijave/${id}/historija`)
+   
+    apiCall("/api/gradske-sluzbe")
       .then((data) => {
-        setHistorija(Array.isArray(data) ? data : []);
+        setSluzbe(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
-        console.error("Greška pri učitavanju historije:", err);
-        setHistorija([]);
-      })
-      .finally(() => setHistorijaLoading(false));
+        console.error("GRESKA:", err);
+      });
 
-    // Validacija statistika
+    
+setHistorijaLoading(true);
+
+apiCall(`/api/prijave/${id}/historija`)
+  .then(async (data) => {
+    const lista = Array.isArray(data) ? data : [];
+
+    setHistorija(lista);
+
+    const uniqueIds = [
+      ...new Set(
+        lista
+          .map((h) => h.korisnikId)
+          .filter((uid) => uid)
+      ),
+    ];
+
+    const results = await Promise.all(
+      uniqueIds.map((uid) =>
+        apiCall(`/api/korisnici/${uid}`)
+          .then((k) => ({
+            id: uid,
+            ime: k.ime,
+            prezime: k.prezime,
+          }))
+          .catch(() => ({
+            id: uid,
+            ime: null,
+            prezime: null,
+          }))
+      )
+    );
+
+    const map = {};
+
+    results.forEach((r) => {
+      map[r.id] = r;
+    });
+
+    setKorisnici((prev) => ({
+      ...prev,
+      ...map,
+    }));
+  })
+  .catch((err) => {
+    console.error("Greška pri učitavanju historije:", err);
+    setHistorija([]);
+  })
+  .finally(() => setHistorijaLoading(false));
+
+    
     apiCall(`/api/prijave/${id}/validacija`)
       .then((data) => {
         setValidacija(data);
@@ -84,13 +115,12 @@ apiCall("/api/gradske-sluzbe")
         console.error("Greška validacije:", err);
       });
 
-
-    // Uvijek dohvatamo svježe podatke o prijavi (ID iz URL-a)
+ 
     apiCall(`/api/prijave/${id}`)
       .then((p) => setPrijava(p))
       .catch((err) => console.error("Greška pri osvježavanju prijave:", err));
 
-    // Dohvati komentare
+   
     setKomentarLoading(true);
     apiCall(showInterni
     ? `/api/prijave/${id}/komentari/interni`
@@ -122,7 +152,7 @@ apiCall("/api/gradske-sluzbe")
     if (!noviStatus) return;
     setLoading(true);
     try {
-      // CQ-03: korisnikId iz auth konteksta, ne hardkodirani 1
+      
       await apiCall(
         `/api/prijave/${prijava.id}/status?noviStatus=${encodeURIComponent(noviStatus)}&korisnikId=${user?.id}`,
         { method: "PATCH" }
@@ -141,12 +171,6 @@ apiCall("/api/gradske-sluzbe")
     }
   }
 
-// Historija prijave
-
-
-
-
-
   async function handleKomentar(e) {
     e.preventDefault();
     if (!komentarTekst.trim()) return;
@@ -154,11 +178,11 @@ apiCall("/api/gradske-sluzbe")
     try {
       const novi = await apiCall(`/api/prijave/${prijava.id}/komentari`, {
         method: "POST",
-       body: JSON.stringify({
-  tekst: komentarTekst,
-  korisnikId: user?.id,
-  interan: showInterni,
-}),
+        body: JSON.stringify({
+          tekst: komentarTekst,
+          korisnikId: user?.id,
+          interan: showInterni,
+        }),
       });
       setKomentari((prev) => [...prev, novi]);
       if (novi.korisnikId && novi.korisnikId !== user?.id && !korisnici[novi.korisnikId]) {
@@ -174,131 +198,116 @@ apiCall("/api/gradske-sluzbe")
       setKomentarSlanje(false);
     }
   }
-async function handleGlasanje(potvrdjeno) {
-  setGlasanjeLoading(true);
 
-  try {
-    await apiCall(`/api/prijave/${prijava.id}/validacija`, {
-      method: "POST",
-      body: JSON.stringify({
-        korisnikId: user?.id,
-        potvrdjeno,
-      }),
-    });
+  async function handleGlasanje(potvrdjeno) {
+    setGlasanjeLoading(true);
 
-    setToast({
-      msg: potvrdjeno
-        ? "Potvrdili ste prijavljeni problem."
-        : "Osporili ste prijavljeni problem.",
-      type: "success",
-    });
-
-    const novaStatistika = await apiCall(
-      `/api/prijave/${prijava.id}/validacija`
-    );
-
-    setValidacija(novaStatistika);
-
-  } catch (err) {
-    setToast({
-      msg: err.message,
-      type: "error",
-    });
-  } finally {
-    setGlasanjeLoading(false);
-  }
-}
-async function handleSluzbaChange(sluzbaId) {
-  setOdabranaSluzba(sluzbaId);
-  setOdabraniRadnik("");
-
-  if (!sluzbaId) {
-    setRadnici([]);
-    return;
-  }
-
-  try {
-    const data = await apiCall(
-      `/api/radnici/sluzba/${sluzbaId}`
-    );
-
-    setRadnici(Array.isArray(data) ? data : []);
-  } catch (err) {
-    console.error("Greška pri učitavanju radnika:", err);
-    setRadnici([]);
-  }
-}
-async function handleDodjelaSluzbe() {
-  if (!odabranaSluzba) return;
-
-  setDodjelaLoading(true);
-
-  try {
-    await apiCall(
-      `/api/prijave/${prijava.id}/dodjeli-sluzbu?sluzbaId=${odabranaSluzba}`,
-      {
-        method: "PATCH",
-      }
-    );
-
-    setToast({
-      msg: "Prijava uspješno dodijeljena službi.",
-      type: "success",
-    });
-
-    const osvjezena = await apiCall(`/api/prijave/${prijava.id}`);
-
-    setPrijava(osvjezena);
-
-  } catch (err) {
-    setToast({
-      msg: err.message,
-      type: "error",
-    });
-  } finally {
-    setDodjelaLoading(false);
-  }
-}
-
-async function handleDodjelaRadnika() {
-  if (!odabraniRadnik) return;
-
-  setDodjelaLoading(true);
-
-  try {
-    await apiCall(
-      `/api/radnici/${odabraniRadnik}/prijave/${prijava.id}`,
-      {
+    try {
+      await apiCall(`/api/prijave/${prijava.id}/validacija`, {
         method: "POST",
-      }
-    );
+        body: JSON.stringify({
+          korisnikId: user?.id,
+          potvrdjeno,
+        }),
+      });
 
-    setToast({
-      msg: "Radnik uspješno dodijeljen prijavi.",
-      type: "success",
-    });
+      setToast({
+        msg: potvrdjeno
+          ? "Potvrdili ste prijavljeni problem."
+          : "Osporili ste prijavljeni problem.",
+        type: "success",
+      });
 
-    const osvjezena = await apiCall(`/api/prijave/${prijava.id}`);
+      const novaStatistika = await apiCall(
+        `/api/prijave/${prijava.id}/validacija`
+      );
 
-    setPrijava(osvjezena);
+      setValidacija(novaStatistika);
 
-  } catch (err) {
-    setToast({
-      msg: err.message,
-      type: "error",
-    });
-  } finally {
-    setDodjelaLoading(false);
+    } catch (err) {
+      setToast({
+        msg: err.message,
+        type: "error",
+      });
+    } finally {
+      setGlasanjeLoading(false);
+    }
   }
-}
 
+  async function handleSluzbaChange(sluzbaId) {
+    setOdabranaSluzba(sluzbaId);
+    setOdabraniRadnik("");
 
+    if (!sluzbaId) {
+      setRadnici([]);
+      return;
+    }
 
+    try {
+      const data = await apiCall(`/api/radnici/sluzba/${sluzbaId}`);
+      setRadnici(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Greška pri učitavanju radnika:", err);
+      setRadnici([]);
+    }
+  }
+
+  async function handleDodjelaSluzbe() {
+    if (!odabranaSluzba) return;
+
+    setDodjelaLoading(true);
+
+    try {
+      await apiCall(
+        `/api/prijave/${prijava.id}/dodjeli-sluzbu?sluzbaId=${odabranaSluzba}`,
+        { method: "PATCH" }
+      );
+
+      setToast({
+        msg: "Prijava uspješno dodijeljena službi.",
+        type: "success",
+      });
+
+      const osvjezena = await apiCall(`/api/prijave/${prijava.id}`);
+      setPrijava(osvjezena);
+
+    } catch (err) {
+      setToast({ msg: err.message, type: "error" });
+    } finally {
+      setDodjelaLoading(false);
+    }
+  }
+
+  async function handleDodjelaRadnika() {
+    if (!odabraniRadnik) return;
+
+    setDodjelaLoading(true);
+
+    try {
+      await apiCall(
+        `/api/radnici/${odabraniRadnik}/prijave/${prijava.id}`,
+        { method: "POST" }
+      );
+
+      setToast({
+        msg: "Radnik uspješno dodijeljen prijavi.",
+        type: "success",
+      });
+
+      const osvjezena = await apiCall(`/api/prijave/${prijava.id}`);
+      setPrijava(osvjezena);
+
+    } catch (err) {
+      setToast({ msg: err.message, type: "error" });
+    } finally {
+      setDodjelaLoading(false);
+    }
+  }
 
   const fmt   = (d) => d ? new Date(d).toLocaleDateString("bs") : "—";
   const fmtDt = (d) => d ? new Date(d).toLocaleString("bs") : "—";
 
-  // Prikazujemo spinner dok se prijava učitava (npr. direktan pristup URL-u)
+
   if (!prijava) {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
@@ -311,16 +320,16 @@ async function handleDodjelaRadnika() {
     <div style={{ animation: "fadeIn 0.25s ease" }}>
       {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
-      {/* UX-03: navigate(-1) koristi browser history – Back dugme radi */}
+   
       <button className="btn-ghost" onClick={() => navigate(-1)} style={{ marginBottom: 28, fontSize: 12, padding: "5px 12px" }}>
         <Icon.ChevLeft /> Nazad
       </button>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16 }}>
-        {/* ─── Lijeva kolona ──────────────────────────────────────────── */}
+       
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* Glavna kartica */}
+       
           <div className="card" style={{ padding: 32 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
               <div>
@@ -355,6 +364,32 @@ async function handleDodjelaRadnika() {
               ))}
             </div>
 
+         
+            {(prijava.grdSluzbald || prijava.odgovornoLiceId) && (
+              <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {prijava.grdSluzbald && (
+                  <div style={{ background: "rgba(155,89,182,0.08)", border: "1px solid rgba(155,89,182,0.25)", borderRadius: 8, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 10, fontWeight: 500, color: "rgba(155,89,182,0.8)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+                      Nadležna služba
+                    </div>
+                    <div style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>
+                      {prijava.nazivSluzbe || `Služba #${prijava.grdSluzbald}`}
+                    </div>
+                  </div>
+                )}
+                {prijava.odgovornoLiceId && (
+                  <div style={{ background: "rgba(52,152,219,0.08)", border: "1px solid rgba(52,152,219,0.25)", borderRadius: 8, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 10, fontWeight: 500, color: "rgba(52,152,219,0.8)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+                      Odgovorni radnik
+                    </div>
+                    <div style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>
+                      {prijava.imeRadnika || `Korisnik #${prijava.odgovornoLiceId}`}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {prijava.latitude && prijava.longitude && (
               <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(46,204,113,0.08)", border: "1px solid rgba(46,204,113,0.2)", borderRadius: 8, display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ color: "#2ECC71" }}><Icon.Pin /></span>
@@ -366,7 +401,7 @@ async function handleDodjelaRadnika() {
             )}
           </div>
 
-          {/* ─── Komentari ────────────────────────────────────────── */}
+         
           <div className="card" style={{ overflow: "hidden" }}>
             <div style={{ padding: "16px 24px", borderBottom: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 10 }}>
               <Icon.Mail />
@@ -476,148 +511,63 @@ async function handleDodjelaRadnika() {
               </form>
             </div>
           </div>
-         
-<div className="card" style={{ overflow: "hidden" }}>
-  <div
-    style={{
-      padding: "16px 24px",
-      borderBottom: `1px solid ${T.line}`,
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-    }}
-  >
-    <Icon.Refresh />
-    <span
-      style={{
-        fontSize: 13,
-        fontWeight: 500,
-        color: T.text,
-      }}
-    >
-      Historija prijave
-    </span>
-  </div>
 
-  {historijaLoading ? (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        padding: 32,
-      }}
-    >
-      <Spinner />
-    </div>
-  ) : historija.length === 0 ? (
-    <div
-      style={{
-        padding: 24,
-        textAlign: "center",
-        color: T.textMuted,
-        fontSize: 13,
-      }}
-    >
-      Nema historije promjena.
-    </div>
-  ) : (
-    <div style={{ padding: "10px 24px 24px" }}>
-      {historija.map((h, i) => (
-        <div
-          key={h.id || i}
-          style={{
-            display: "flex",
-            gap: 14,
-            position: "relative",
-            paddingBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: "50%",
-              background: "#2ECC71",
-              marginTop: 4,
-              flexShrink: 0,
-            }}
-          />
-
-          {i < historija.length - 1 && (
-            <div
-              style={{
-                position: "absolute",
-                left: 5,
-                top: 18,
-                width: 2,
-                height: "100%",
-                background: T.line,
-              }}
-            />
-          )}
-
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: T.text,
-                marginBottom: 4,
-              }}
-            >
-              Status promijenjen
+        
+          <div className="card" style={{ overflow: "hidden" }}>
+            <div style={{ padding: "16px 24px", borderBottom: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 10 }}>
+              <Icon.Refresh />
+              <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>Historija prijave</span>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-                marginBottom: 6,
-              }}
-            >
-              <StatusChip status={h.statusIz} />
+            {historijaLoading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: 32 }}><Spinner /></div>
+            ) : historija.length === 0 ? (
+              <div style={{ padding: 24, textAlign: "center", color: T.textMuted, fontSize: 13 }}>
+                Nema historije promjena.
+              </div>
+            ) : (
+              <div style={{ padding: "10px 24px 24px" }}>
+                {historija.map((h, i) => (
+                  <div
+                    key={h.id || i}
+                    style={{ display: "flex", gap: 14, position: "relative", paddingBottom: 24 }}
+                  >
+                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#2ECC71", marginTop: 4, flexShrink: 0 }} />
 
-              <span style={{ color: T.textMuted }}>
-                →
-              </span>
+                    {i < historija.length - 1 && (
+                      <div style={{ position: "absolute", left: 5, top: 18, width: 2, height: "100%", background: T.line }} />
+                    )}
 
-              <StatusChip status={h.statusU} />
-            </div>
-
-            <div
-              style={{
-                fontSize: 12,
-                color: T.textMuted,
-              }}
-            >
-              Korisnik #{h.korisnikId}
-            </div>
-
-            <div
-              style={{
-                fontSize: 11,
-                color: T.textMuted,
-                marginTop: 4,
-              }}
-            >
-              {new Date(h.datumPromjene).toLocaleString("bs")}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 4 }}>
+                        Status promijenjen
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                        <StatusChip status={h.statusIz} />
+                        <span style={{ color: T.textMuted }}>→</span>
+                        <StatusChip status={h.statusU} />
+                      </div>
+                      <div style={{ fontSize: 12, color: T.textMuted }}>
+  {korisnici[h.korisnikId]?.ime
+    ? `${korisnici[h.korisnikId].ime} ${korisnici[h.korisnikId].prezime || ""}`.trim()
+    : `Korisnik #${h.korisnikId}`}
 </div>
-
+                      <div style={{ fontSize: 11, color: T.textMuted, marginTop: 4 }}>
+                        {new Date(h.datumPromjene).toLocaleString("bs")}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
         </div>
 
-        {/* ─── Desna kolona (sidebar) ───────────────────────────── */}
+    
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
-          {/* Status promjena */}
+        
           <div className="card" style={{ padding: 22 }}>
             <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 16 }}>Promijeni status</div>
             <div style={{ marginBottom: 12 }}>
@@ -636,100 +586,90 @@ async function handleDodjelaRadnika() {
             </button>
           </div>
 
-          {/* Dodjela službe i radnika */}
-{ (
-  <div className="card" style={{ padding: 22 }}>
+          
+          <div className="card" style={{ padding: 22 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 18 }}>
+              Dodjela prijave
+            </div>
 
-    <div
-      style={{
-        fontSize: 13,
-        fontWeight: 500,
-        color: T.text,
-        marginBottom: 18,
-      }}
-    >
-      Dodjela prijave
-    </div>
+            {(prijava.grdSluzbald || prijava.odgovornoLiceId) && (
+              <div style={{ marginBottom: 16, padding: "10px 12px", background: T.bgRaised, border: `1px solid ${T.line}`, borderRadius: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 500, color: T.textMuted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>
+                  Trenutna dodjela
+                </div>
+                {prijava.grdSluzbald && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, color: T.textMuted }}>Služba:</span>
+                    <span style={{ fontSize: 12, color: T.text, fontWeight: 500 }}>
+                      {prijava.nazivSluzbe || `#${prijava.grdSluzbald}`}
+                    </span>
+                  </div>
+                )}
+                {prijava.odgovornoLiceId && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, color: T.textMuted }}>Radnik:</span>
+                    <span style={{ fontSize: 12, color: T.text, fontWeight: 500 }}>
+                      {prijava.imeRadnika || `#${prijava.odgovornoLiceId}`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
-    {/* SLUŽBA */}
-    <div style={{ marginBottom: 18 }}>
-      <label className="label">
-        Nadležna služba
-      </label>
+          
+            <div style={{ marginBottom: 18 }}>
+              <label className="label">Nadležna služba</label>
+              <select
+                value={odabranaSluzba}
+                onChange={(e) => handleSluzbaChange(e.target.value)}
+                className="input-field"
+              >
+                <option value="">Odaberi službu...</option>
+                {sluzbe.map((s) => (
+                  <option key={s.id} value={s.id}>{s.naziv}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleDodjelaSluzbe}
+                disabled={!odabranaSluzba || dodjelaLoading}
+                className="btn-prim"
+                style={{ width: "100%", marginTop: 10 }}
+              >
+                {dodjelaLoading ? <><Spinner size={14} color="#fff" /> Dodjela...</> : "Dodijeli službu"}
+              </button>
+            </div>
 
-      <select
-        value={odabranaSluzba}
-        onChange={(e) =>
-          handleSluzbaChange(e.target.value)
-        }
-        className="input-field"
-      >
-        <option value="">
-          Odaberi službu...
-        </option>
-
-        {sluzbe.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.naziv}
-          </option>
-        ))}
-      </select>
-
-      <button
-        onClick={handleDodjelaSluzbe}
-        disabled={!odabranaSluzba || dodjelaLoading}
-        className="btn-prim"
-        style={{
-          width: "100%",
-          marginTop: 10,
-        }}
-      >
-        Dodijeli službu
-      </button>
-    </div>
-
-    {/* RADNIK */}
-    <div>
-      <label className="label">
-        Dodjela radnika
-      </label>
-
-      <select
-        value={odabraniRadnik}
-        onChange={(e) =>
-          setOdabraniRadnik(e.target.value)
-        }
-        className="input-field"
-        disabled={!odabranaSluzba}
-      >
-        <option value="">
-          Odaberi radnika...
-        </option>
-
-        {radnici.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.ime} {r.prezime}
-          </option>
-        ))}
-      </select>
-
-      <button
-        onClick={handleDodjelaRadnika}
-        disabled={!odabraniRadnik || dodjelaLoading}
-        className="btn-prim"
-        style={{
-          width: "100%",
-          marginTop: 10,
-        }}
-      >
-        Dodijeli radnika
-      </button>
-    </div>
-
-  </div>
-)}
-
-          {/* Detalji prijave */}
+        
+            <div>
+              <label className="label">Dodjela radnika</label>
+              <select
+                value={odabraniRadnik}
+                onChange={(e) => setOdabraniRadnik(e.target.value)}
+                className="input-field"
+                disabled={!odabranaSluzba}
+              >
+                <option value="">
+                  {odabranaSluzba ? "Odaberi radnika..." : "Prvo odaberi službu"}
+                </option>
+                {radnici.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.ime && r.prezime
+                      ? `${r.ime} ${r.prezime}`
+                      : r.ime || `Radnik #${r.id}`}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleDodjelaRadnika}
+                disabled={!odabraniRadnik || dodjelaLoading}
+                className="btn-prim"
+                style={{ width: "100%", marginTop: 10 }}
+              >
+                {dodjelaLoading ? <><Spinner size={14} color="#fff" /> Dodjela...</> : "Dodijeli radnika"}
+              </button>
+            </div>
+          </div>
+ 
           <div className="card" style={{ padding: 22 }}>
             <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 14 }}>Detalji prijave</div>
             {[
@@ -745,120 +685,36 @@ async function handleDodjelaRadnika() {
           </div>
 
           <div className="card" style={{ padding: 22 }}>
-  <div
-    style={{
-      fontSize: 13,
-      fontWeight: 500,
-      color: T.text,
-      marginBottom: 16,
-    }}
-  >
-    Validacija zajednice
-  </div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 16 }}>
+              Validacija zajednice
+            </div>
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr 1fr",
-      gap: 10,
-      marginBottom: 18,
-    }}
-  >
-    <div
-      style={{
-        background: T.bgRaised,
-        border: `1px solid ${T.line}`,
-        borderRadius: 8,
-        padding: 12,
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: 11, color: T.textMuted }}>
-        Potvrde
-      </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 18 }}>
+              <div style={{ background: T.bgRaised, border: `1px solid ${T.line}`, borderRadius: 8, padding: 12, textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: T.textMuted }}>Potvrde</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: "#2ECC71" }}>{validacija.brPotvrda || 0}</div>
+              </div>
+              <div style={{ background: T.bgRaised, border: `1px solid ${T.line}`, borderRadius: 8, padding: 12, textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: T.textMuted }}>Osporavanja</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: "#E74C3C" }}>{validacija.brOsporavanja || 0}</div>
+              </div>
+              <div style={{ background: T.bgRaised, border: `1px solid ${T.line}`, borderRadius: 8, padding: 12, textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: T.textMuted }}>Ukupno</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: T.text }}>{validacija.ukupnoGlasova || 0}</div>
+              </div>
+            </div>
 
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 600,
-          color: "#2ECC71",
-        }}
-      >
-        {validacija.brPotvrda || 0}
-      </div>
-    </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => handleGlasanje(true)} disabled={glasanjeLoading} className="btn-prim" style={{ flex: 1 }}>
+                Potvrdi
+              </button>
+              <button onClick={() => handleGlasanje(false)} disabled={glasanjeLoading} className="btn-ghost" style={{ flex: 1 }}>
+                Ospori
+              </button>
+            </div>
+          </div>
 
-    <div
-      style={{
-        background: T.bgRaised,
-        border: `1px solid ${T.line}`,
-        borderRadius: 8,
-        padding: 12,
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: 11, color: T.textMuted }}>
-        Osporavanja
-      </div>
-
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 600,
-          color: "#E74C3C",
-        }}
-      >
-        {validacija.brOsporavanja || 0}
-      </div>
-    </div>
-
-    <div
-      style={{
-        background: T.bgRaised,
-        border: `1px solid ${T.line}`,
-        borderRadius: 8,
-        padding: 12,
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: 11, color: T.textMuted }}>
-        Ukupno
-      </div>
-
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 600,
-          color: T.text,
-        }}
-      >
-        {validacija.ukupnoGlasova || 0}
-      </div>
-    </div>
-  </div>
-
-  <div style={{ display: "flex", gap: 10 }}>
-    <button
-      onClick={() => handleGlasanje(true)}
-      disabled={glasanjeLoading}
-      className="btn-prim"
-      style={{ flex: 1 }}
-    >
-      Potvrdi
-    </button>
-
-    <button
-      onClick={() => handleGlasanje(false)}
-      disabled={glasanjeLoading}
-      className="btn-ghost"
-      style={{ flex: 1 }}
-    >
-      Ospori
-    </button>
-  </div>
-</div>
-
-          {/* Arhivacija */}
+         
           {(user?.uloga === "RUKOVODILAC" || user?.uloga === "RADNIK" || user?.uloga === "ADMIN") && (
             <div className="card" style={{ padding: 22, borderColor: T.amberBorder }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: T.amber, marginBottom: 12 }}>Admin akcije</div>

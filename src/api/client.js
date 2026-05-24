@@ -77,18 +77,22 @@ async function refreshAccessToken() {
 }
 
 // ─── HTTP status → korisnička poruka greške (UX-02) ────────────────────────
-export function friendlyError(status, fallbackMessage) {
+export function friendlyError(status, fallbackMessage, context) {
   if (status === 500 || status === 503) {
     return "Sistem je trenutno nedostupan. Pokušajte ponovo za nekoliko minuta.";
   }
   if (status === 401) {
+    // Kontekst "login" → prikaži poruku o pogrešnoj lozinci umjesto generičke
+    if (context === "login") {
+      return "Pogrešna email adresa ili lozinka. Provjerite podatke i pokušajte ponovo.";
+    }
     return "Niste autorizovani. Prijavite se ponovo.";
   }
   if (status === 403) {
     return "Nemate dozvolu za ovu akciju.";
   }
   if (status === 404) {
-    return "Traženi resurs nije pronađen.";
+    return "Pogrešan unos podataka.";
   }
   return fallbackMessage || `Greška (HTTP ${status})`;
 }
@@ -123,7 +127,9 @@ export async function apiCall(path, options = {}, explicitToken = null) {
     const body = await res.json().catch(() => ({}));
     const rawMsg = body.message || body.poruka || body.error || `HTTP ${res.status}`;
     // UX-02: prikazujemo korisnički prihvatljive poruke umjesto tehničkih
-    throw new Error(friendlyError(res.status, rawMsg));
+    // Za login endpoint (prijava), 401 znači pogrešna lozinka/email
+    const context = path.includes("/auth/prijava") ? "login" : undefined;
+    throw new Error(friendlyError(res.status, rawMsg, context));
   }
   if (res.status === 204) return null;
   return res.json();

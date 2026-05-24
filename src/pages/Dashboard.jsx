@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import T from "../styles/tokens";
 import { apiCall } from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -7,8 +8,9 @@ import Spinner from "../components/Spinner";
 import { StatusChip } from "../components/Chips";
 import Icon from "../components/Icon";
 
-export default function Dashboard({ setActiveTab }) {
+export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [prijave, setPrijave] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -21,11 +23,9 @@ export default function Dashboard({ setActiveTab }) {
       const data = await apiCall("/api/prijave");
       setPrijave(Array.isArray(data) ? data : []);
     } catch (err) {
-      // CQ-05: prikazujemo grešku korisniku umjesto tihog ignorisanja
       console.error("Greška pri učitavanju prijava:", err);
       setError(err.message || "Sistem je trenutno nedostupan. Pokušajte ponovo za nekoliko minuta.");
-    }
-    finally {
+    } finally {
       setLoading(false);
       setRefreshing(false);
     }
@@ -59,21 +59,20 @@ export default function Dashboard({ setActiveTab }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <PageHeader
-        title={`Dobro jutro${user?.ime ? `, ${user.ime}` : ""}` }
+        title={`Zdravo${user?.ime ? `, ${user.ime}` : ""}`}
         sub={new Date().toLocaleDateString("bs", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
         action={
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => loadPrijave(true)} disabled={refreshing} className="btn-ghost" style={{ padding: "7px 12px", fontSize: 12 }}>
               {refreshing ? <Spinner size={14}/> : <Icon.Refresh/>}
             </button>
-            <button className="btn-prim" onClick={() => setActiveTab("nova")}>
+            <button className="btn-prim" onClick={() => navigate("/nova")}>
               <Icon.Plus/> Nova prijava
             </button>
           </div>
         }
       />
 
-      {/* Stat row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
         {statCards.map((c, i) => (
           <div key={i} className="card stat-card" style={{ padding: "20px 22px" }}>
@@ -89,14 +88,14 @@ export default function Dashboard({ setActiveTab }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 16 }}>
-        {/* Recent */}
+      
         <div className="card" style={{ overflow: "hidden" }}>
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
             padding: "18px 24px", borderBottom: `1px solid ${T.line}`,
           }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>Nedavne prijave</span>
-            <button onClick={() => setActiveTab("prijave")} className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }}>
+            <button onClick={() => navigate("/prijave")} className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }}>
               Sve <Icon.ArrowR/>
             </button>
           </div>
@@ -113,7 +112,7 @@ export default function Dashboard({ setActiveTab }) {
             <div style={{ padding: 48, textAlign: "center" }}>
               <div style={{ fontSize: 28, opacity: 0.3, marginBottom: 12 }}>◌</div>
               <div style={{ color: T.textMuted, fontSize: 13, marginBottom: 16 }}>Nema prijava</div>
-              <button onClick={() => setActiveTab("nova")} className="btn-prim" style={{ fontSize: 12, padding: "7px 16px" }}>
+              <button onClick={() => navigate("/nova")} className="btn-prim" style={{ fontSize: 12, padding: "7px 16px" }}>
                 <Icon.Plus/> Kreirajte prvu prijavu
               </button>
             </div>
@@ -131,7 +130,8 @@ export default function Dashboard({ setActiveTab }) {
                 <div key={p.id} className="tbl-row" style={{
                   gridTemplateColumns: "1fr 100px 90px", gap: 12, height: 52,
                   animation: `fadeUp 0.25s ease ${i * 0.04}s both`,
-                }}>
+                  cursor: "pointer",
+                }} onClick={() => navigate(`/prijave/${p.id}`)}>
                   <div style={{ overflow: "hidden" }}>
                     <div style={{ fontSize: 13, fontWeight: 500, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.naslov}</div>
                     {p.adresa && <div style={{ fontSize: 11, color: T.textMuted, display: "flex", alignItems: "center", gap: 3, marginTop: 1 }}><Icon.Pin/>{p.adresa}</div>}
@@ -146,11 +146,9 @@ export default function Dashboard({ setActiveTab }) {
           )}
         </div>
 
-        {/* Right col */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Categories */}
           <div className="card" style={{ padding: "18px 22px" }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 18 }}>Po kategorijama</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 14 }}>Po kategorijama</div>
             {loading ? (
               <div style={{ display: "flex", justifyContent: "center", padding: 24 }}><Spinner/></div>
             ) : catList.length === 0 ? (
@@ -159,8 +157,8 @@ export default function Dashboard({ setActiveTab }) {
               const pct = s.ukupno ? Math.round((count/s.ukupno)*100) : 0;
               const col = catColors[i % catColors.length];
               return (
-                <div key={cat} style={{ marginBottom: 14, animation: `fadeUp 0.25s ease ${i*0.05}s both` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                <div key={cat} style={{ marginBottom: 12, animation: `fadeUp 0.25s ease ${i*0.05}s both` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ fontSize: 12, color: T.textSub }}>{cat}</span>
                     <span style={{ fontSize: 11, color: T.textMuted, fontFamily: "'Geist Mono', monospace" }}>{count}</span>
                   </div>
@@ -172,7 +170,6 @@ export default function Dashboard({ setActiveTab }) {
             })}
           </div>
 
-          {/* Priority */}
           {!loading && prijave.length > 0 && (
             <div className="card" style={{ padding: "18px 22px" }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 14 }}>Po prioritetu</div>

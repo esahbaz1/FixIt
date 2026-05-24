@@ -1,10 +1,151 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import T from "../styles/tokens";
 import { apiCall } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { KATEGORIJE, PRIO_CFG } from "../api/constants";
 import PageHeader from "../components/PageHeader";
 import Spinner from "../components/Spinner";
+
+function LeafletMap({ lat, lng, onPick }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+  
+    const initMap = () => {
+      if (mapInstanceRef.current) return;
+      const L = window.L;
+      if (!L) return;
+
+      const defaultLat = lat || 43.8563;
+      const defaultLng = lng || 18.4131;
+
+      const map = L.map(containerRef.current, { zoomControl: true }).setView(
+        [defaultLat, defaultLng],
+        14
+      );
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap",
+        maxZoom: 19,
+      }).addTo(map);
+
+      const icon = L.divIcon({
+        html: `<div style="
+          width:28px;height:28px;border-radius:50% 50% 50% 0;
+          background:#E74C3C;border:3px solid #fff;
+          transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.4);
+        "></div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        className: "",
+      });
+
+
+      if (lat && lng) {
+        markerRef.current = L.marker([lat, lng], { icon }).addTo(map);
+      }
+
+
+      map.on("click", (e) => {
+        const { lat: clickLat, lng: clickLng } = e.latlng;
+        if (markerRef.current) {
+          markerRef.current.setLatLng([clickLat, clickLng]);
+        } else {
+          markerRef.current = L.marker([clickLat, clickLng], { icon }).addTo(map);
+        }
+        onPick(clickLat, clickLng);
+      });
+
+      mapInstanceRef.current = map;
+      mapRef.current = map;
+    };
+
+    if (window.L) {
+      initMap();
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = initMap;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  
+  }, []);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.L) return;
+    if (!lat || !lng) return;
+    const L = window.L;
+    const icon = L.divIcon({
+      html: `<div style="
+        width:28px;height:28px;border-radius:50% 50% 50% 0;
+        background:#E74C3C;border:3px solid #fff;
+        transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      "></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      className: "",
+    });
+    if (markerRef.current) {
+      markerRef.current.setLatLng([lat, lng]);
+    } else {
+      markerRef.current = L.marker([lat, lng], { icon }).addTo(mapInstanceRef.current);
+    }
+    mapInstanceRef.current.setView([lat, lng], mapInstanceRef.current.getZoom());
+  }, [lat, lng]);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div
+        ref={containerRef}
+        style={{
+          width: "100%",
+          height: 320,
+          borderRadius: 10,
+          border: `1px solid ${T.line}`,
+          overflow: "hidden",
+          background: T.bgRaised,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: 10,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(0,0,0,0.65)",
+          backdropFilter: "blur(6px)",
+          color: "#fff",
+          fontSize: 11,
+          padding: "5px 12px",
+          borderRadius: 20,
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Kliknite na mapu za odabir lokacije
+      </div>
+    </div>
+  );
+}
 
 export default function NovaPrijavaPage({ onSuccess }) {
   const { user } = useAuth();
@@ -18,9 +159,16 @@ export default function NovaPrijavaPage({ onSuccess }) {
     prioritet: "SREDNJI",
   });
   const [loading, setLoading] = useState(false);
-  // UX-02: error iz apiCall je već korisnički prihvatljiv (friendlyError u client.js)
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+
+  function handleMapPick(lat, lng) {
+    setForm((prev) => ({
+      ...prev,
+      latitude: lat.toFixed(6),
+      longitude: lng.toFixed(6),
+    }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -36,7 +184,6 @@ export default function NovaPrijavaPage({ onSuccess }) {
           longitude: parseFloat(form.longitude) || 18.4131,
           adresa: form.adresa,
           kategorijaId: parseInt(form.kategorijaId),
-          // CQ-03: koristimo user.id iz auth konteksta, ne hardkodirani 1
           korisnikId: user?.id,
           prioritet: form.prioritet,
         }),
@@ -44,7 +191,6 @@ export default function NovaPrijavaPage({ onSuccess }) {
       setDone(true);
       setTimeout(onSuccess, 1600);
     } catch (err) {
-      // UX-02: err.message je već preveden u friendlyError unutar apiCall
       setError(err.message);
     } finally {
       setLoading(false);
@@ -107,6 +253,9 @@ export default function NovaPrijavaPage({ onSuccess }) {
     { v: "HITNO", label: "Hitno", color: T.red },
   ];
 
+  const mapLat = parseFloat(form.latitude) || null;
+  const mapLng = parseFloat(form.longitude) || null;
+
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <PageHeader title="Nova prijava" sub="Prijavite komunalni problem" />
@@ -155,7 +304,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
               />
             </div>
 
-            {/* Category */}
+          
             <div style={{ marginBottom: 18 }}>
               <label className="label">Kategorija *</label>
               <div
@@ -201,7 +350,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
               </div>
             </div>
 
-            {/* Priority */}
+     
             <div style={{ marginBottom: 18 }}>
               <label className="label">Prioritet</label>
               <div
@@ -252,6 +401,22 @@ export default function NovaPrijavaPage({ onSuccess }) {
               />
             </div>
 
+     
+            <div style={{ marginBottom: 16 }}>
+              <label className="label">
+                Lokacija na mapi{" "}
+                <span style={{ color: T.textMuted, fontWeight: 400 }}>
+                  — kliknite za tačno označavanje
+                </span>
+              </label>
+              <LeafletMap
+                lat={mapLat}
+                lng={mapLng}
+                onPick={handleMapPick}
+              />
+            </div>
+
+         
             <div
               style={{
                 display: "grid",
@@ -271,6 +436,10 @@ export default function NovaPrijavaPage({ onSuccess }) {
                   }
                   placeholder="43.8563"
                   className="input-field"
+                  style={{
+                    background: form.latitude ? T.greenDim : undefined,
+                    borderColor: form.latitude ? T.greenBorder : undefined,
+                  }}
                 />
               </div>
               <div>
@@ -284,6 +453,10 @@ export default function NovaPrijavaPage({ onSuccess }) {
                   }
                   placeholder="18.4131"
                   className="input-field"
+                  style={{
+                    background: form.longitude ? T.greenDim : undefined,
+                    borderColor: form.longitude ? T.greenBorder : undefined,
+                  }}
                 />
               </div>
             </div>
@@ -305,7 +478,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
           </form>
         </div>
 
-        {/* Tips */}
+        
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="card" style={{ padding: 20 }}>
             <div
@@ -321,8 +494,8 @@ export default function NovaPrijavaPage({ onSuccess }) {
             {[
               "Konkretan naslov koji opisuje problem",
               "Detaljan opis veličine i utjecaja",
+              "Kliknite na mapu za tačnu GPS lokaciju",
               "Tačna adresa ubrzava terene",
-              "GPS koordinate za precizno lociranje",
               "Realan prioritet — hitno samo ako je opasnost",
             ].map((tip, i) => (
               <div
@@ -348,12 +521,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
                     marginTop: 1,
                   }}
                 >
-                  <svg
-                    width="7"
-                    height="7"
-                    viewBox="0 0 7 7"
-                    fill="none"
-                  >
+                  <svg width="7" height="7" viewBox="0 0 7 7" fill="none">
                     <polyline
                       points="1,3.5 3,5.5 6,1.5"
                       stroke={T.textMuted}
@@ -394,7 +562,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
             >
               Za situacije koje direktno ugrožavaju ljude ili imovinu,
               kontaktirajte komunalne službe direktno uz odabir prioriteta
-              "Hitno".
+              &quot;Hitno&quot;.
             </p>
           </div>
         </div>

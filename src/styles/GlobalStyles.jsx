@@ -136,8 +136,6 @@ export default function GlobalStyles() {
 
       .divider { width: 1px; height: 16px; background: ${T.line}; flex-shrink: 0; }
 
-      /* ─── UX-04: Responsive grid helper klase ───────────────────────────── */
-      /* Koristite ove klase umjesto inline gridTemplateColumns za responsive podršku */
 
       .grid-main { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
       .grid-main-wide { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
@@ -152,10 +150,10 @@ export default function GlobalStyles() {
         .grid-stats { grid-template-columns: repeat(2, 1fr); }
         .grid-meta  { grid-template-columns: repeat(2, 1fr); }
 
-        /* Navbar: smanji padding, sakrij tekst ako nema mjesta */
+   
         .nav-btn { padding: 6px 8px; font-size: 12px; }
 
-        /* Tabela: smanji padding */
+        
         .tbl-row { padding: 0 12px; }
       }
 
@@ -166,16 +164,127 @@ export default function GlobalStyles() {
         .grid-prio  { grid-template-columns: 1fr; }
         .grid-main, .grid-main-wide, .grid-main-narrow { grid-template-columns: 1fr; }
 
-        /* Kompaktniji padding na karticama */
+       
         .card { border-radius: 8px; }
       }
 
-      /* UX-05: Osiguravamo minimalni kontrast za label elemente (min 12px) */
+      
       .label { font-size: 12px; }
 
-      /* UX-05: textMuted na tamnoj pozadini – povećana svjetlina za bolji kontrast */
-      /* Originalna boja #4D7A5C na #132B1E ≈ 3.1:1 – povećano na ~4.6:1 */
+      
       .text-muted-accessible { color: #6FA882; }
+
+     
+      .app-header {
+        height: 52px;
+        background: rgba(15,61,40,0.97);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid ${T.line};
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        gap: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        flex-shrink: 0;
+        overflow: hidden;
+      }
+
+      .app-main {
+        flex: 1;
+        padding: 40px 48px;
+        width: 100%;
+        max-width: 1600px;
+        margin: 0 auto;
+        box-sizing: border-box;
+      }
+
+      .desktop-nav { display: flex; }
+      .hamburger-btn { display: none !important; }
+      .mobile-nav-item { font-size: 14px; padding: 10px 14px; }
+
+      
+      @media (max-width: 900px) {
+        .app-main { padding: 24px 20px; }
+        .desktop-nav { display: none !important; }
+        .hamburger-btn { display: flex !important; }
+        .user-name { display: none; }
+        .user-role { display: none; }
+        .logout-text { display: none; }
+        .logout-btn { padding: 5px 8px !important; }
+
+        
+        [style*="gridTemplateColumns"][style*="1fr 300px"],
+        [style*="gridTemplateColumns"][style*="1fr 360px"],
+        [style*="gridTemplateColumns"][style*="1fr 280px"] {
+          grid-template-columns: 1fr !important;
+        }
+     
+        [style*="repeat(4,1fr)"],
+        [style*="repeat(4, 1fr)"] {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+       
+        [style*="1fr 1fr"],
+        [style*=""1fr 1fr""],
+        [style*="gridTemplateColumns: "1fr 1fr""] {
+          grid-template-columns: 1fr !important;
+        }
+      }
+
+      
+      @media (max-width: 600px) {
+        .app-main { padding: 16px 12px; }
+        .app-header { padding: 0 12px; gap: 10px; }
+        .divider { display: none; }
+
+     
+        [style*="gridTemplateColumns"] {
+          grid-template-columns: 1fr !important;
+        }
+       
+        [style*="repeat(2,1fr)"],
+        [style*="repeat(2, 1fr)"] {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+
+       
+        .tbl-row { padding: 0 10px; height: auto !important; min-height: 52px; flex-wrap: wrap; }
+
+       
+        .card { border-radius: 8px; }
+        .card > [style*="padding: "22px"] { padding: 16px !important; }
+
+       
+        .filter-chip { font-size: 11px; padding: 3px 9px; }
+
+        
+        [style*="flexWrap: "wrap""] { gap: 8px !important; }
+      }
+
+
+      .grid-main { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+      .grid-main-wide { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
+      .grid-main-narrow { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+      .grid-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+      .grid-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .grid-cat4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .grid-prio { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+      @media (max-width: 900px) {
+        .grid-main, .grid-main-wide, .grid-main-narrow { grid-template-columns: 1fr; }
+        .grid-stats { grid-template-columns: repeat(2, 1fr); }
+        .grid-meta  { grid-template-columns: repeat(2, 1fr); }
+        .tbl-row { padding: 0 12px; }
+      }
+      @media (max-width: 600px) {
+        .grid-stats { grid-template-columns: 1fr; }
+        .grid-meta  { grid-template-columns: 1fr; }
+        .grid-cat4  { grid-template-columns: repeat(2, 1fr); }
+        .grid-prio  { grid-template-columns: 1fr; }
+        .grid-main, .grid-main-wide, .grid-main-narrow { grid-template-columns: 1fr; }
+      }
     `}</style>
   );
 }

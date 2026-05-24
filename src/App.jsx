@@ -13,6 +13,8 @@ import NovaPrijavaPage from "./pages/NovaPrijavaPage";
 import ProfilPage from "./pages/ProfilPage";
 import NotifikacijePage from "./pages/NotifikacijePage";
 import AdminPage from "./pages/AdminPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import StatistikaPage from "./pages/StatistikaPage";
 import Spinner from "./components/Spinner";
 import {
   setTokens,
@@ -24,7 +26,7 @@ import {
   API_BASE,
 } from "./api/client";
 
-// Zaštićena ruta – preusmjerava na /login ako korisnik nije prijavljen
+
 function PrivateRoute({ auth, children }) {
   if (auth === "loading") {
     return (
@@ -38,11 +40,9 @@ function PrivateRoute({ auth, children }) {
 
 export default function App() {
   const navigate = useNavigate();
-  // "loading" | null | { user }
   const [auth, setAuth] = useState("loading");
   const [toast, setToast] = useState(null);
 
-  // Slušamo globalni event za prisilnu odjavu (istekao token)
   useEffect(() => {
     const handler = () => {
       setAuth(null);
@@ -53,7 +53,6 @@ export default function App() {
     return () => window.removeEventListener("auth:logout", handler);
   }, [navigate]);
 
-  // UX-01 / CQ-04: Obnova sesije iz sessionStorage pri prvom pokretanju
   useEffect(() => {
     async function tryRestoreSession() {
       const savedUser = loadUserFromStorage();
@@ -122,10 +121,8 @@ export default function App() {
         <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />
       )}
 
-      {/* UX-03: Sve rute definirane ovdje — Back/Forward rade ispravno,
-          URL-ovi su bookmarkable i shareable */}
       <Routes>
-        {/* Javne rute */}
+       
         <Route
           path="/login"
           element={
@@ -157,7 +154,7 @@ export default function App() {
           }
         />
 
-        {/* Zaštićene rute unutar AppShell-a */}
+        
         <Route
           path="/*"
           element={
@@ -181,6 +178,8 @@ export default function App() {
                     />
                     <Route path="/notifikacije" element={<NotifikacijePage />} />
                     <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+                    <Route path="/statistika" element={<StatistikaPage />} />
                     <Route path="/profil" element={<ProfilPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
