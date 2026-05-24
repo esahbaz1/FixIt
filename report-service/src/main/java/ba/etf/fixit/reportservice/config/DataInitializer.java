@@ -39,30 +39,30 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println(">>> Report Service: inicijalizacija...");
 
         // Statusi
-        Statusi sNovo = statusiRepo.save(new Statusi(null, "Novo", "Novoprijavljen problem"));
-        Statusi sDodijeljeno = statusiRepo.save(new Statusi(null, "Dodijeljeno", "Dodijeljen nadleznoj sluzbi"));
-        Statusi sURadu = statusiRepo.save(new Statusi(null, "U radu", "Radnici rade na rjesavanju"));
-        Statusi sRijeseno = statusiRepo.save(new Statusi(null, "Rijeseno", "Problem uspjesno rijesen"));
-        Statusi sZatvoreno = statusiRepo.save(new Statusi(null, "Zatvoreno", "Prijava zatvorena"));
+        Statusi sNovo       = statusiRepo.save(new Statusi(null, "Novo",       "Novoprijavljen problem"));
+        Statusi sDodijeljeno= statusiRepo.save(new Statusi(null, "Dodijeljeno","Dodijeljen nadleznoj sluzbi"));
+        Statusi sURadu      = statusiRepo.save(new Statusi(null, "U radu",     "Radnici rade na rjesavanju"));
+        Statusi sRijeseno   = statusiRepo.save(new Statusi(null, "Rijeseno",   "Problem uspjesno rijesen"));
+        Statusi sZatvoreno  = statusiRepo.save(new Statusi(null, "Zatvoreno",  "Prijava zatvorena"));
         System.out.println(">>> Kreirano 5 statusa.");
 
         // Tipovi promjena
-        TipPromjene tp1 = tipRepo.save(new TipPromjene(null, null, "Novo"));
-        TipPromjene tp2 = tipRepo.save(new TipPromjene(null, "Novo", "Dodijeljeno"));
-        TipPromjene tp3 = tipRepo.save(new TipPromjene(null, "Dodijeljeno", "U radu"));
-        TipPromjene tp4 = tipRepo.save(new TipPromjene(null, "U radu", "Rijeseno"));
-        TipPromjene tp5 = tipRepo.save(new TipPromjene(null, "Rijeseno", "Zatvoreno"));
+        TipPromjene tp1 = tipRepo.save(new TipPromjene(null, null,        "Novo"));
+        TipPromjene tp2 = tipRepo.save(new TipPromjene(null, "Novo",      "Dodijeljeno"));
+        TipPromjene tp3 = tipRepo.save(new TipPromjene(null, "Dodijeljeno","U radu"));
+        TipPromjene tp4 = tipRepo.save(new TipPromjene(null, "U radu",    "Rijeseno"));
+        TipPromjene tp5 = tipRepo.save(new TipPromjene(null, "Rijeseno",  "Zatvoreno"));
         TipPromjene tp6 = tipRepo.save(new TipPromjene(null, "Zatvoreno", "Novo"));
         System.out.println(">>> Kreirano 6 tipova promjena.");
 
         // Kategorije
-        Kategorija putCesta = kategorijaRepo.save(new Kategorija(null, "Put/cesta", "Ostecenja kolovoza", 1L));
-        Kategorija rasvjeta = kategorijaRepo.save(new Kategorija(null, "Javna rasvjeta", "Pokvarena rasvjeta", 2L));
-        Kategorija vodovod = kategorijaRepo.save(new Kategorija(null, "Vodovod", "Kvarovi vodovodne mreze", 1L));
-        Kategorija zelenilo = kategorijaRepo.save(new Kategorija(null, "Zelenilo", "Odrzavanje parkova", 4L));
-        Kategorija otpad = kategorijaRepo.save(new Kategorija(null, "Otpad", "Nelegalne deponije", 1L));
-        Kategorija saobracaj = kategorijaRepo.save(new Kategorija(null, "Saobracaj", "Semafori i znakovi", 3L));
-        Kategorija ostalo = kategorijaRepo.save(new Kategorija(null, "Ostalo", "Ostali problemi", 1L));
+        Kategorija putCesta  = kategorijaRepo.save(new Kategorija(null, "Put/cesta",     "Ostecenja kolovoza",    1L));
+        Kategorija rasvjeta  = kategorijaRepo.save(new Kategorija(null, "Javna rasvjeta","Pokvarena rasvjeta",    2L));
+        Kategorija vodovod   = kategorijaRepo.save(new Kategorija(null, "Vodovod",       "Kvarovi vodovodne mreze",1L));
+        Kategorija zelenilo  = kategorijaRepo.save(new Kategorija(null, "Zelenilo",      "Odrzavanje parkova",    4L));
+        Kategorija otpad     = kategorijaRepo.save(new Kategorija(null, "Otpad",         "Nelegalne deponije",    1L));
+        Kategorija saobracaj = kategorijaRepo.save(new Kategorija(null, "Saobracaj",     "Semafori i znakovi",    3L));
+        Kategorija ostalo    = kategorijaRepo.save(new Kategorija(null, "Ostalo",        "Ostali problemi",       1L));
         System.out.println(">>> Kreirano 7 kategorija.");
 
         // Prijava 1 - rupa na putu (U radu)
@@ -100,6 +100,8 @@ public class DataInitializer implements CommandLineRunner {
         historijaRepo.save(new HistorijaPrijave(null, tp1, p2, 6L, null));
 
         // Prijava 3 - curenje vode (Rijeseno, arhivirana)
+        // FIX: datumZavrsetka mora biti NAKON datumPodnosenja (@PrePersist postavlja datumPodnosenja na now())
+        // Koristimo minusDays(5) za podnosenje i minusDays(2) za zavrsetak = 72h razlika
         Prijava p3 = new Prijava();
         p3.setNaslov("Curenje vode - Ilindenska");
         p3.setOpis("Curi voda iz vodovodne cijevi na Ilindenskoj ulici.");
@@ -111,8 +113,17 @@ public class DataInitializer implements CommandLineRunner {
         p3.setStatus(sRijeseno);
         p3.setPrioritet(PrioritetPrijave.HITNO);
         p3.setArhiviran(true);
-        p3.setDatumZavrsetka(java.time.LocalDateTime.now().minusDays(2));
         prijavaRepo.save(p3);
+        // Nakon save(), @PrePersist je postavio datumPodnosenja = now()
+        // Sada ručno postavljamo datumZavrsetka = now() + 3 dana da bude pozitivna razlika
+        // Ali ne možemo promijeniti datumPodnosenja jer je updatable=false
+        // Zaobilazno rješenje: koristimo native SQL update ili setujemo zavrsetak u budućnosti
+        // Najjednostavnije: koristimo JPQL update
+        prijavaRepo.flush();
+        // Postavljamo datumZavrsetka 72 sata NAKON datumPodnosenja (koji je upravo kreiran = now())
+        p3.setDatumZavrsetka(java.time.LocalDateTime.now().plusHours(72));
+        prijavaRepo.save(p3);
+
         historijaRepo.save(new HistorijaPrijave(null, tp1, p3, 5L, null));
         historijaRepo.save(new HistorijaPrijave(null, tp2, p3, 1L, null));
         historijaRepo.save(new HistorijaPrijave(null, tp3, p3, 2L, null));

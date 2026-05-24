@@ -1,4 +1,5 @@
 package ba.etf.fixit.managementservice.exception;
+import ba.etf.fixit.managementservice.client.ReportServiceKlijent;
 import org.springframework.http.*;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,6 +22,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplikatException.class)
     public ResponseEntity<ApiGreska> handleDuplikat(DuplikatException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiGreska(409,"CONFLICT",ex.getMessage()));
+    }
+    @ExceptionHandler(ReportServiceKlijent.PrijavaNotFoundException.class)
+    public ResponseEntity<ApiGreska> handlePrijavaNotFound(ReportServiceKlijent.PrijavaNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiGreska(404,"NOT_FOUND",ex.getMessage()));
+    }
+    @ExceptionHandler(ReportServiceKlijent.ReportServiceNedostupanException.class)
+    public ResponseEntity<ApiGreska> handleReportServiceNedostupan(ReportServiceKlijent.ReportServiceNedostupanException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiGreska(503,"SERVICE_UNAVAILABLE",ex.getMessage()));
     }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiGreska> handleOpsta(Exception ex) {

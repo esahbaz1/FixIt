@@ -22,11 +22,13 @@ public class PrijavaResponseDTO {
     private Long kategorijaId;
     private String nazivKategorije;
     private Long korisnikId;
-    private Long grdSluzbald;          
-    private Long odgovornoLiceId;      
+    private Long grdSluzbald;
+    private Long odgovornoLiceId;
     private LocalDateTime datumPodnosenja;
     private LocalDateTime datumRoka;
     private LocalDateTime datumZavrsetka;
     private Boolean arhiviran;
-    private List<String> fotografijePutanje; 
+    private List<String> fotografijePutanje;
+    private String nazivSluzbe;      
+    private String imeRadnika;       
 }

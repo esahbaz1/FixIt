@@ -20,11 +20,11 @@ import java.util.List;
 public class RadnikController {
 
     private final RadnikService service;
-    private final ReportServiceKlijent reportServiceKlijent; 
+    private final ReportServiceKlijent reportServiceKlijent;
 
     public RadnikController(RadnikService service, ReportServiceKlijent reportServiceKlijent) {
         this.service = service;
-        this.reportServiceKlijent = reportServiceKlijent; 
+        this.reportServiceKlijent = reportServiceKlijent;
     }
 
     @Operation(summary = "Dohvati sve radnike")
@@ -43,6 +43,12 @@ public class RadnikController {
     @GetMapping("/sluzba/{sluzbaId}")
     public ResponseEntity<List<RadnikResponseDTO>> dohvatiPoSluzbi(@PathVariable Long sluzbaId) {
         return ResponseEntity.ok(service.dohvatiPoSluzbi(sluzbaId));
+    }
+
+    @Operation(summary = "Dohvati radnika po korisnikId (veza sa user-service)")
+    @GetMapping("/korisnik/{korisnikId}")
+    public ResponseEntity<RadnikResponseDTO> dohvatiPoKorisniku(@PathVariable Long korisnikId) {
+        return ResponseEntity.ok(service.dohvatiPoKorisnikuId(korisnikId));
     }
 
     @Operation(summary = "Kreiraj novog radnika")
@@ -80,7 +86,6 @@ public class RadnikController {
         return ResponseEntity.ok(service.premjestiRadnika(radnikId, sluzbaId));
     }
 
-    
     @Operation(summary = "Dodijeli radnika na konkretnu prijavu",
                description = "Rukovodilac dodjeljuje radnika (po ID-u radnika) kao odgovorno lice za rjesavanje prijave. " +
                              "Poziva report-service da azurira odgovornoLiceId na prijavi.")
