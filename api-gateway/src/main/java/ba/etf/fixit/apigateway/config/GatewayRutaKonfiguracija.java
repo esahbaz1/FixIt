@@ -46,7 +46,7 @@ public class GatewayRutaKonfiguracija {
                         .uri("lb://management-service"))
 
                 .route("management-sluzbe", r -> r
-                        .path("/api/sluzbe/**")
+                        .path("/api/gradske-sluzbe/**")
                         .uri("lb://management-service"))
 
                 .route("management-otkrivanje", r -> r

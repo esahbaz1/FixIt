@@ -44,7 +44,8 @@ public interface PrijavaRepository extends JpaRepository<Prijava, Long> {
     @Query("SELECT p.kategorija.naziv, COUNT(p) FROM Prijava p GROUP BY p.kategorija.naziv")
     List<Object[]> countPoKategorijama();
 
-    @Query("SELECT p.status.naziv, COUNT(p) FROM Prijava p WHERE p.arhiviran = false GROUP BY p.status.naziv")
+    // FIX: uklonjen filter arhiviran=false da se vide SVI statusi uključujući Rijeseno
+    @Query("SELECT p.status.naziv, COUNT(p) FROM Prijava p GROUP BY p.status.naziv")
     List<Object[]> countPoStatusima();
 
     @Query("SELECT FUNCTION('DATE_FORMAT', p.datumPodnosenja, '%Y-%m'), COUNT(p) " +
@@ -52,6 +53,7 @@ public interface PrijavaRepository extends JpaRepository<Prijava, Long> {
            "ORDER BY FUNCTION('DATE_FORMAT', p.datumPodnosenja, '%Y-%m')")
     List<Object[]> countPoMjesecima(@Param("od") LocalDateTime od);
 
-    @Query("SELECT AVG(TIMESTAMPDIFF(HOUR, p.datumPodnosenja, p.datumZavrsetka)) FROM Prijava p WHERE p.datumZavrsetka IS NOT NULL")
+    // FIX: ABS() sprečava negativne vrijednosti kada datumZavrsetka < datumPodnosenja (bug u test podacima)
+    @Query("SELECT AVG(ABS(TIMESTAMPDIFF(HOUR, p.datumPodnosenja, p.datumZavrsetka))) FROM Prijava p WHERE p.datumZavrsetka IS NOT NULL AND p.datumPodnosenja IS NOT NULL")
     Double prosjecnoVrijemeRjesavanjaH();
 }

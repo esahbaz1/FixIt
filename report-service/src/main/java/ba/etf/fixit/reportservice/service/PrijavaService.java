@@ -1,5 +1,6 @@
 package ba.etf.fixit.reportservice.service;
 
+import ba.etf.fixit.reportservice.client.ManagementServiceKlijent;
 import ba.etf.fixit.reportservice.client.UserServiceKlijent;
 import ba.etf.fixit.reportservice.dto.*;
 import ba.etf.fixit.reportservice.exception.ResourceNotFoundException;
@@ -33,8 +34,9 @@ public class PrijavaService {
     private final StatusiRepository statusiRepo;
     private final TipPromjeneRepository tipPromjeneRepo;
     private final HistorijaPrijaveRepository historijaPrijaveRepo;
-    private final FotografijaRepository fotografijaRepo;  
+    private final FotografijaRepository fotografijaRepo;
     private final UserServiceKlijent userServiceKlijent;
+    private final ManagementServiceKlijent managementServiceKlijent;
     private final RabbitTemplate rabbitTemplate;
     private final SagaLogRepository sagaLogRepository;
 
@@ -44,8 +46,9 @@ public class PrijavaService {
             StatusiRepository statusiRepo,
             TipPromjeneRepository tipPromjeneRepo,
             HistorijaPrijaveRepository historijaPrijaveRepo,
-            FotografijaRepository fotografijaRepo,  
+            FotografijaRepository fotografijaRepo,
             UserServiceKlijent userServiceKlijent,
+            ManagementServiceKlijent managementServiceKlijent,
             RabbitTemplate rabbitTemplate,
             SagaLogRepository sagaLogRepository) {
         this.prijavaRepo = prijavaRepo;
@@ -53,8 +56,9 @@ public class PrijavaService {
         this.statusiRepo = statusiRepo;
         this.tipPromjeneRepo = tipPromjeneRepo;
         this.historijaPrijaveRepo = historijaPrijaveRepo;
-        this.fotografijaRepo = fotografijaRepo;  
+        this.fotografijaRepo = fotografijaRepo;
         this.userServiceKlijent = userServiceKlijent;
+        this.managementServiceKlijent = managementServiceKlijent;
         this.rabbitTemplate = rabbitTemplate;
         this.sagaLogRepository = sagaLogRepository;
     }
@@ -161,7 +165,6 @@ public class PrijavaService {
         return mapToResponse(prijavaRepo.save(p));
     }
 
-    
     public PrijavaResponseDTO dodijeliSluzbu(Long prijavaId, Long sluzbaId) {
         Prijava p = nadji(prijavaId);
         p.setGrdSluzbald(sluzbaId);
@@ -172,7 +175,6 @@ public class PrijavaService {
         return mapToResponse(prijavaRepo.save(p));
     }
 
-    
     public PrijavaResponseDTO dodijeliRadnika(Long prijavaId, Long korisnikId) {
         Prijava p = nadji(prijavaId);
         p.setOdgovornoLiceId(korisnikId);
@@ -194,7 +196,6 @@ public class PrijavaService {
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
-    
     public PrijavaResponseDTO mapToResponse(Prijava p) {
         PrijavaResponseDTO dto = new PrijavaResponseDTO();
         dto.setId(p.getId());
@@ -208,16 +209,29 @@ public class PrijavaService {
         dto.setKategorijaId(p.getKategorija().getId());
         dto.setNazivKategorije(p.getKategorija().getNaziv());
         dto.setKorisnikId(p.getKorisnikId());
-        dto.setGrdSluzbald(p.getGrdSluzbald());           
-        dto.setOdgovornoLiceId(p.getOdgovornoLiceId());  
+        dto.setGrdSluzbald(p.getGrdSluzbald());
+        dto.setOdgovornoLiceId(p.getOdgovornoLiceId());
         dto.setDatumPodnosenja(p.getDatumPodnosenja());
         dto.setDatumRoka(p.getDatumRoka());
         dto.setDatumZavrsetka(p.getDatumZavrsetka());
         dto.setArhiviran(p.getArhiviran());
-        
+
         List<String> putanje = fotografijaRepo.findByPrijavaId(p.getId())
                 .stream().map(f -> f.getPutanja()).collect(Collectors.toList());
         dto.setFotografijePutanje(putanje);
+
+        // Dohvati naziv dodijeljene gradske službe
+        if (p.getGrdSluzbald() != null) {
+            String nazivSluzbe = managementServiceKlijent.dohvatiNazivSluzbe(p.getGrdSluzbald());
+            dto.setNazivSluzbe(nazivSluzbe);
+        }
+
+        // Dohvati ime odgovornog radnika (korisnikId pohranjen kao odgovornoLiceId)
+        if (p.getOdgovornoLiceId() != null) {
+            String imeRadnika = managementServiceKlijent.dohvatiImeRadnika(p.getOdgovornoLiceId());
+            dto.setImeRadnika(imeRadnika);
+        }
+
         return dto;
     }
 }

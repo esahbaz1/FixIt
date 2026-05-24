@@ -28,6 +28,21 @@ function Start-Servis($dir) {
 }
 
 # =========================
+# FUNKCIJA ZA FRONTEND
+# =========================
+function Start-Frontend($dir) {
+    $path = Join-Path $root $dir
+
+    Start-Process powershell -ArgumentList @(
+        "-NoExit",
+        "-Command",
+        "cd '$path'; npm install; npm run dev"
+    ) -WindowStyle Normal
+
+    Write-Host "Pokrenut frontend: $dir" -ForegroundColor Green
+}
+
+# =========================
 # START
 # =========================
 Write-Host "Pokretanje FixIt servisa..." -ForegroundColor Cyan
@@ -42,5 +57,11 @@ Start-Servis "management-service"
 Start-Servis "report-service"
 Start-Servis "notification-service"
 
-Write-Host "Svi servisi pokrenuti." -ForegroundColor Cyan
+# =========================
+# FRONTEND
+# =========================
+Write-Host "Pokrecem frontend..." -ForegroundColor Cyan
+Start-Frontend "frontend"
+
+Write-Host "Svi servisi i frontend su pokrenuti." -ForegroundColor Cyan
 Write-Host "Eureka dashboard: http://localhost:8761"

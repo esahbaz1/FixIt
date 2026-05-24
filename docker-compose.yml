@@ -1,0 +1,413 @@
+# ═══════════════════════════════════════════════════════════════
+#  FixIt – Docker Compose
+#
+#  Redoslijed pokretanja:
+#  1. MySQL (4 baze)  +  RabbitMQ
+#  2. eureka-server
+#  3. user-service, management-service, report-service, notification-service
+#  4. api-gateway
+#  5. frontend
+# ═══════════════════════════════════════════════════════════════
+networks:
+  fixit-network:
+    driver: bridge
+
+volumes:
+  mysql-users-data:
+  mysql-reports-data:
+  mysql-management-data:
+  mysql-notifications-data:
+  report-uploads:
+  rabbitmq-data:
+
+# ─────────────────────────────────────────────────────────────
+# INFRASTRUKTURA
+# ─────────────────────────────────────────────────────────────
+services:
+
+  # ── MySQL: fixit_users ──────────────────────────────────────
+  mysql-users:
+    image: mysql:8.0
+    container_name: fixit-mysql-users
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: fixit_users
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-users-data:/var/lib/mysql
+    networks:
+      - fixit-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    command: >
+      --innodb-buffer-pool-size=128M
+      --max-connections=50
+      --performance-schema=OFF
+
+  # ── MySQL: fixit_reports ────────────────────────────────────
+  mysql-reports:
+    image: mysql:8.0
+    container_name: fixit-mysql-reports
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: fixit_reports
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-reports-data:/var/lib/mysql
+    networks:
+      - fixit-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    command: >
+      --innodb-buffer-pool-size=128M
+      --max-connections=50
+      --performance-schema=OFF
+
+  # ── MySQL: fixit_management ─────────────────────────────────
+  mysql-management:
+    image: mysql:8.0
+    container_name: fixit-mysql-management
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: fixit_management
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-management-data:/var/lib/mysql
+    networks:
+      - fixit-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    command: >
+      --innodb-buffer-pool-size=128M
+      --max-connections=50
+      --performance-schema=OFF
+
+  # ── MySQL: fixit_notifications ──────────────────────────────
+  mysql-notifications:
+    image: mysql:8.0
+    container_name: fixit-mysql-notifications
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: fixit_notifications
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-notifications-data:/var/lib/mysql
+    networks:
+      - fixit-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    command: >
+      --innodb-buffer-pool-size=128M
+      --max-connections=50
+      --performance-schema=OFF
+
+  # ── RabbitMQ ────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:4.0-management-alpine
+    container_name: fixit-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_ERLANG_COOKIE: "fixit-secret-cookie"
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit heartbeat 10"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - fixit-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 15s
+      retries: 20
+      start_period: 90s
+
+# ─────────────────────────────────────────────────────────────
+# EUREKA SERVER
+# ─────────────────────────────────────────────────────────────
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: fixit-eureka
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    networks:
+      - fixit-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - eureka.instance.hostname=eureka-server
+      - eureka.client.register-with-eureka=false
+      - eureka.client.fetch-registry=false
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+# ─────────────────────────────────────────────────────────────
+# MIKROSERVISI
+# ─────────────────────────────────────────────────────────────
+
+  # user-service i management-service ne koriste RabbitMQ
+  # pa ne trebaju čekati na njega
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: fixit-user-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    networks:
+      - fixit-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xms128m -Xmx400m
+      - spring.datasource.url=jdbc:mysql://mysql-users:3306/fixit_users?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - spring.datasource.username=${DB_USERNAME}
+      - spring.datasource.password=${DB_PASSWORD}
+      - eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka
+      - eureka.instance.hostname=user-service
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}
+      - GATEWAY_SECRET=${GATEWAY_SECRET}
+    depends_on:
+      mysql-users:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  management-service:
+    build:
+      context: ./management-service
+      dockerfile: Dockerfile
+    container_name: fixit-management-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    networks:
+      - fixit-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xms128m -Xmx400m
+      - spring.datasource.url=jdbc:mysql://mysql-management:3306/fixit_management?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - spring.datasource.username=${DB_USERNAME}
+      - spring.datasource.password=${DB_PASSWORD}
+      - eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka
+      - eureka.instance.hostname=management-service
+      - discovery.user-service.direct-base-url=http://user-service:8081
+      - discovery.report-service.direct-base-url=http://report-service:8083
+      - GATEWAY_SECRET=${GATEWAY_SECRET}
+    depends_on:
+      mysql-management:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  report-service:
+    build:
+      context: ./report-service
+      dockerfile: Dockerfile
+    container_name: fixit-report-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    networks:
+      - fixit-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xms128m -Xmx400m
+      - spring.datasource.url=jdbc:mysql://mysql-reports:3306/fixit_reports?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - spring.datasource.username=${DB_USERNAME}
+      - spring.datasource.password=${DB_PASSWORD}
+      - eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka
+      - eureka.instance.hostname=report-service
+      - spring.rabbitmq.host=rabbitmq
+      - spring.rabbitmq.port=5672
+      - spring.rabbitmq.username=${RABBITMQ_USER}
+      - spring.rabbitmq.password=${RABBITMQ_PASS}
+      - GATEWAY_SECRET=${GATEWAY_SECRET}
+      - fixit.upload-dir=/app/uploads/fotografije
+    volumes:
+      - report-uploads:/app/uploads/fotografije
+    depends_on:
+      mysql-reports:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: fixit-notification-service
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    networks:
+      - fixit-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xms128m -Xmx400m
+      - spring.datasource.url=jdbc:mysql://mysql-notifications:3306/fixit_notifications?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - spring.datasource.username=${DB_USERNAME}
+      - spring.datasource.password=${DB_PASSWORD}
+      - eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka
+      - eureka.instance.hostname=notification-service
+      - spring.rabbitmq.host=rabbitmq
+      - spring.rabbitmq.port=5672
+      - spring.rabbitmq.username=${RABBITMQ_USER}
+      - spring.rabbitmq.password=${RABBITMQ_PASS}
+      - GATEWAY_SECRET=${GATEWAY_SECRET}
+    depends_on:
+      mysql-notifications:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+# ─────────────────────────────────────────────────────────────
+# API GATEWAY
+# ─────────────────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: fixit-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - fixit-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xms128m -Xmx400m
+      - eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka
+      - eureka.instance.hostname=api-gateway
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}
+      - GATEWAY_SECRET=${GATEWAY_SECRET}
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      management-service:
+        condition: service_healthy
+      report-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+# ─────────────────────────────────────────────────────────────
+# FRONTEND (React + Vite → nginx)
+# ─────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # VITE_API_URL mora biti prazan string ili "/" jer nginx proxy
+        # preusmjerava /api/* ka api-gateway kontejneru interno.
+        # Browser šalje zahtjeve na isti origin (port 80), nginx ih forward-uje.
+        VITE_API_BASE: ""
+    container_name: fixit-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - fixit-network
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M

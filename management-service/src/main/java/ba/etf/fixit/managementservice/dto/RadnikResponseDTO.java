@@ -14,4 +14,6 @@ public class RadnikResponseDTO {
     private String pozicija; 
     private String kompetencije; 
     private Boolean aktivan;
+    private String ime;      
+    private String prezime;
 }
