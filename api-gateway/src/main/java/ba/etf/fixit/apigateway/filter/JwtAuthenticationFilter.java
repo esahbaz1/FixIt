@@ -25,10 +25,10 @@ import java.util.List;
  * Globalni filter koji se izvrsava za SVAKI zahtjev kroz gateway.
  *
  * Logika:
- * 1. Javni putevi — propusti, ali dodaj X-Gateway-Secret
- * 2. Zasticeni putevi — zahtijevaju valjan Bearer access token
+ * 1. Javni putevi - propusti, ali dodaj X-Gateway-Secret
+ * 2. Zasticeni putevi - zahtijevaju valjan Bearer access token
  * 3. Iz tokena ekstraktuj korisnicke podatke, proslijedi ih kao X-Korisnik-* zaglavlja
- * 4. Uvijek dodaj X-Gateway-Secret — mikroservisi ga provjeravaju da
+ * 4. Uvijek dodaj X-Gateway-Secret - mikroservisi ga provjeravaju da
  *    zahtjev dolazi kroz gateway a ne direktno
  */
 @Slf4j

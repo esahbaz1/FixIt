@@ -154,16 +154,12 @@ apiCall(`/api/prijave/${id}/historija`)
     try {
       
       await apiCall(
-        `/api/prijave/${prijava.id}/status?noviStatus=${encodeURIComponent(noviStatus)}&korisnikId=${user?.id}`,
+        `/api/prijave/${prijava.id}/status?noviStatus=${encodeURIComponent(noviStatus)}`,
         { method: "PATCH" }
       );
-      setToast({ msg: `Status promijenjen u "${noviStatus}".`, type: "success" });
-      setPrijava((p) => ({ ...p, statusNaziv: noviStatus }));
+      setToast({ msg: `Akcija pokrenuta. Obavijest ćete primiti kada status bude promijenjen u "${noviStatus}".`, type: "success" });
       setNoviStatus("");
-      setTimeout(() => {
-        if (showToast) showToast(`Status promijenjen u "${noviStatus}".`);
-        navigate("/prijave");
-      }, 1000);
+      setTimeout(() => navigate("/prijave"), 2500);
     } catch (err) {
       setToast({ msg: err.message, type: "error" });
     } finally {
@@ -180,7 +176,6 @@ apiCall(`/api/prijave/${id}/historija`)
         method: "POST",
         body: JSON.stringify({
           tekst: komentarTekst,
-          korisnikId: user?.id,
           interan: showInterni,
         }),
       });
@@ -205,10 +200,7 @@ apiCall(`/api/prijave/${id}/historija`)
     try {
       await apiCall(`/api/prijave/${prijava.id}/validacija`, {
         method: "POST",
-        body: JSON.stringify({
-          korisnikId: user?.id,
-          potvrdjeno,
-        }),
+        body: JSON.stringify({ potvrdjeno }),
       });
 
       setToast({

@@ -13,7 +13,7 @@ import java.io.IOException;
 
 /**
  * Provjerava da zahtjevi dolaze kroz API Gateway.
- * Ako nema X-Gateway-Secret headera — odbij sa 403.
+ * Ako nema X-Gateway-Secret headera - odbij sa 403.
  */
 @Component
 @Order(1)

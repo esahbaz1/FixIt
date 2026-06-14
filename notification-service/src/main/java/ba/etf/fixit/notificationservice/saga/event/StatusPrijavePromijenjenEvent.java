@@ -6,7 +6,8 @@ import java.time.LocalDateTime;
 public class StatusPrijavePromijenjenEvent implements Serializable {
 
     private Long prijavaId;
-    private Long korisnikId;
+    private Long korisnikId;        // podnosilac prijave
+    private Long odgovornoLiceId;   // radnik dodijeljen (može biti null)
     private String stariStatus;
     private String noviStatus;
     private String naslovPrijave;
@@ -20,6 +21,9 @@ public class StatusPrijavePromijenjenEvent implements Serializable {
 
     public Long getKorisnikId() { return korisnikId; }
     public void setKorisnikId(Long korisnikId) { this.korisnikId = korisnikId; }
+
+    public Long getOdgovornoLiceId() { return odgovornoLiceId; }
+    public void setOdgovornoLiceId(Long odgovornoLiceId) { this.odgovornoLiceId = odgovornoLiceId; }
 
     public String getStariStatus() { return stariStatus; }
     public void setStariStatus(String stariStatus) { this.stariStatus = stariStatus; }

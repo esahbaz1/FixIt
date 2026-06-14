@@ -3,7 +3,6 @@ package ba.etf.fixit.reportservice.service;
 import ba.etf.fixit.reportservice.client.UserServiceKlijent;
 import ba.etf.fixit.reportservice.dto.KorisnikDTO;
 import ba.etf.fixit.reportservice.dto.PrijavaRequestDTO;
-import ba.etf.fixit.reportservice.dto.PrijavaResponseDTO;
 import ba.etf.fixit.reportservice.exception.ResourceNotFoundException;
 import ba.etf.fixit.reportservice.model.*;
 import ba.etf.fixit.reportservice.repository.*;
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -55,8 +55,18 @@ class PrijavaServiceTest {
         return p;
     }
 
+    private PrijavaRequestDTO napraviDto() {
+        PrijavaRequestDTO dto = new PrijavaRequestDTO();
+        dto.setNaslov("Rupa na putu");
+        dto.setOpis("Velika rupa");
+        dto.setLatitude(43.85);
+        dto.setLongitude(18.41);
+        dto.setKategorijaId(1L);
+        return dto;
+    }
+
     @Test
-    void kreiraj_aktivanKorisnik_uspjesno() {
+    void kreirajAsync_aktivanKorisnik_uspjesno() {
         KorisnikDTO korisnik = new KorisnikDTO(1L, "Ana", "Simic", "ana@test.ba", "GRADJANIN", true);
         when(userServiceKlijent.validirajKorisnika(1L)).thenReturn(korisnik);
 
@@ -66,52 +76,37 @@ class PrijavaServiceTest {
         when(statusiRepo.findByNaziv("Novo")).thenReturn(Optional.of(status));
         when(prijavaRepo.save(any())).thenReturn(napraviPrijavu(kat, status));
 
-        PrijavaRequestDTO dto = new PrijavaRequestDTO();
-        dto.setNaslov("Rupa na putu"); dto.setOpis("Velika rupa");
-        dto.setLatitude(43.85); dto.setLongitude(18.41);
-        dto.setKategorijaId(1L); dto.setKorisnikId(1L);
-
-        PrijavaResponseDTO result = service.kreiraj(dto);
+        Map<String, Object> result = service.kreirajAsync(napraviDto(), 1L);
 
         assertNotNull(result);
-        assertEquals("Rupa na putu", result.getNaslov());
+        assertEquals(1L, result.get("prijavaId"));
+        assertEquals("POKRENUTO", result.get("status"));
         verify(userServiceKlijent).validirajKorisnika(1L);
         verify(prijavaRepo).save(any());
     }
 
     @Test
-    void kreiraj_korisnikNijePronadjen_bacaException() {
+    void kreirajAsync_korisnikNijePronadjen_bacaException() {
         when(userServiceKlijent.validirajKorisnika(99L))
                 .thenThrow(new UserServiceKlijent.KorisnikNijePronadjenException("Korisnik 99 nije pronadjen"));
 
-        PrijavaRequestDTO dto = new PrijavaRequestDTO();
-        dto.setNaslov("Test"); dto.setOpis("Test opis");
-        dto.setLatitude(43.0); dto.setLongitude(18.0);
-        dto.setKategorijaId(1L); dto.setKorisnikId(99L);
-
         assertThrows(UserServiceKlijent.KorisnikNijePronadjenException.class,
-                () -> service.kreiraj(dto));
+                () -> service.kreirajAsync(napraviDto(), 99L));
         verify(prijavaRepo, never()).save(any());
     }
 
     @Test
-    void kreiraj_korisnikNijeAktivan_bacaException() {
+    void kreirajAsync_korisnikNijeAktivan_bacaException() {
         when(userServiceKlijent.validirajKorisnika(2L))
                 .thenThrow(new UserServiceKlijent.KorisnikNijeAktivanException("Korisnik 2 je deaktiviran"));
 
-        PrijavaRequestDTO dto = new PrijavaRequestDTO();
-        dto.setNaslov("Test"); dto.setOpis("Test opis");
-        dto.setLatitude(43.0); dto.setLongitude(18.0);
-        dto.setKategorijaId(1L); dto.setKorisnikId(2L);
-
         assertThrows(UserServiceKlijent.KorisnikNijeAktivanException.class,
-                () -> service.kreiraj(dto));
+                () -> service.kreirajAsync(napraviDto(), 2L));
         verify(prijavaRepo, never()).save(any());
     }
 
     @Test
-    void kreiraj_userServiceNedostupan_gracefulDegradation_prijavaSeKreira() {
-
+    void kreirajAsync_userServiceNedostupan_gracefulDegradation_prijavaSeKreira() {
         when(userServiceKlijent.validirajKorisnika(1L)).thenReturn(null);
 
         Kategorija kat = napraviKategoriju();
@@ -120,28 +115,25 @@ class PrijavaServiceTest {
         when(statusiRepo.findByNaziv("Novo")).thenReturn(Optional.of(status));
         when(prijavaRepo.save(any())).thenReturn(napraviPrijavu(kat, status));
 
-        PrijavaRequestDTO dto = new PrijavaRequestDTO();
-        dto.setNaslov("Test degradacija"); dto.setOpis("Test opis");
-        dto.setLatitude(43.0); dto.setLongitude(18.0);
-        dto.setKategorijaId(1L); dto.setKorisnikId(1L);
+        PrijavaRequestDTO dto = napraviDto();
+        dto.setNaslov("Test degradacija");
 
-        PrijavaResponseDTO result = service.kreiraj(dto);
+        Map<String, Object> result = service.kreirajAsync(dto, 1L);
         assertNotNull(result);
+        assertEquals("POKRENUTO", result.get("status"));
         verify(prijavaRepo).save(any());
     }
 
     @Test
-    void kreiraj_kategorijaNePostoji_bacaException() {
+    void kreirajAsync_kategorijaNePostoji_bacaException() {
         when(userServiceKlijent.validirajKorisnika(1L))
                 .thenReturn(new KorisnikDTO(1L, "Ana", "Simic", "ana@test.ba", "GRADJANIN", true));
         when(kategorijaRepo.findById(999L)).thenReturn(Optional.empty());
 
-        PrijavaRequestDTO dto = new PrijavaRequestDTO();
-        dto.setNaslov("Test"); dto.setOpis("Test opis");
-        dto.setLatitude(43.0); dto.setLongitude(18.0);
-        dto.setKategorijaId(999L); dto.setKorisnikId(1L);
+        PrijavaRequestDTO dto = napraviDto();
+        dto.setKategorijaId(999L);
 
-        assertThrows(ResourceNotFoundException.class, () -> service.kreiraj(dto));
+        assertThrows(ResourceNotFoundException.class, () -> service.kreirajAsync(dto, 1L));
     }
 
     @Test

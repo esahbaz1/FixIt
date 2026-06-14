@@ -13,11 +13,11 @@ import java.util.Arrays;
  * Kontrola pristupa za notification-service.
  *
  * Pravila:
- *  - GET /api/notifikacije/** — korisnik moze citati SVOJE notifikacije
+ *  - GET /api/notifikacije/** - korisnik moze citati SVOJE notifikacije
  *    (provjera u servisu: korisnikId iz konteksta == notifikacija.korisnikId)
- *  - POST /api/notifikacije — interno slanje (obicno pozivaju drugi mikroservisi)
+ *  - POST /api/notifikacije - interno slanje (obicno pozivaju drugi mikroservisi)
  *    Dozvoljavamo svim autentificiranim korisnicima i internim zahtjevima
- *  - DELETE — samo ADMIN
+ *  - DELETE - samo ADMIN
  */
 @Component
 public class UlogaInterceptor implements HandlerInterceptor {
@@ -36,7 +36,7 @@ public class UlogaInterceptor implements HandlerInterceptor {
         }
 
         // Interni pozivi od strane drugih mikroservisa (X-Interni-Servis zaglavlje)
-        // Ovo zaglavlje dodaje gateway ili drugi mikroservis — ne klijent
+        // Ovo zaglavlje dodaje gateway ili drugi mikroservis - ne klijent
         String interniServis = request.getHeader("X-Interni-Servis");
         if (interniServis != null && !interniServis.isBlank()) {
             return true;
@@ -47,7 +47,7 @@ public class UlogaInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // Brisanje — samo ADMIN
+        // Brisanje - samo ADMIN
         if ("DELETE".equals(metoda)) {
             if (!imaUlogu(uloga, "ADMIN")) {
                 pisGresku(response, HttpStatus.FORBIDDEN, "Brisanje notifikacija dozvoljeno samo ADMIN");

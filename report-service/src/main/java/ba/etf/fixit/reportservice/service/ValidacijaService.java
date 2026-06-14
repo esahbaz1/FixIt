@@ -23,14 +23,16 @@ public class ValidacijaService {
         this.prijavaRepo = prijavaRepo;
     }
 
-    public ValidacijaResponseDTO validiraj(Long prijavaId, ValidacijaRequestDTO dto) {
+    /**
+     * Bilježi glas korisnika - korisnikId se uzima iz autentifikovanog konteksta.
+     */
+    public ValidacijaResponseDTO validiraj(Long prijavaId, ValidacijaRequestDTO dto, Long korisnikId) {
         Prijava prijava = prijavaRepo.findById(prijavaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prijava " + prijavaId + " nije pronadjena"));
 
-        // Ako je korisnik vec glasao, azuriramo glas
         Validacija validacija = validacijaRepo
-                .findByPrijavaIdAndKorisnikId(prijavaId, dto.getKorisnikId())
-                .orElse(new Validacija(null, prijava, dto.getKorisnikId(), dto.getPotvrdjeno(), null));
+                .findByPrijavaIdAndKorisnikId(prijavaId, korisnikId)
+                .orElse(new Validacija(null, prijava, korisnikId, dto.getPotvrdjeno(), null));
 
         validacija.setPotvrdjeno(dto.getPotvrdjeno());
         return mapToResponse(validacijaRepo.save(validacija));

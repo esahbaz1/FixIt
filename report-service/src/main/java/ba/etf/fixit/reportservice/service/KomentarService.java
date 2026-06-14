@@ -16,14 +16,14 @@ public class KomentarService {
 
     private final KomentarRepository komentarRepo;
     private final PrijavaRepository prijavaRepo;
-    private final HistorijaPrijaveRepository historijaPrijaveRepo; 
+    private final HistorijaPrijaveRepository historijaPrijaveRepo;
 
     public KomentarService(KomentarRepository komentarRepo,
                             PrijavaRepository prijavaRepo,
                             HistorijaPrijaveRepository historijaPrijaveRepo) {
         this.komentarRepo = komentarRepo;
         this.prijavaRepo = prijavaRepo;
-        this.historijaPrijaveRepo = historijaPrijaveRepo; 
+        this.historijaPrijaveRepo = historijaPrijaveRepo;
     }
 
     public List<KomentarResponseDTO> dohvatiJavne(Long prijavaId) {
@@ -31,20 +31,21 @@ public class KomentarService {
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
-   
     public List<KomentarResponseDTO> dohvatiInterne(Long prijavaId) {
         return komentarRepo.findByPrijavaIdAndInteranTrue(prijavaId)
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
-    public KomentarResponseDTO dodaj(Long prijavaId, KomentarRequestDTO dto) {
+    /**
+     * Dodaje komentar - korisnikId se uzima iz autentifikovanog konteksta, ne iz request body-a.
+     */
+    public KomentarResponseDTO dodaj(Long prijavaId, KomentarRequestDTO dto, Long korisnikId) {
         Prijava p = prijavaRepo.findById(prijavaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prijava " + prijavaId + " nije pronadjena"));
-        Komentar k = new Komentar(null, dto.getKorisnikId(), p, dto.getNaslov(), dto.getTekst(), dto.getInteran(), null);
+        Komentar k = new Komentar(null, korisnikId, p, dto.getNaslov(), dto.getTekst(), dto.getInteran(), null);
         return mapToResponse(komentarRepo.save(k));
     }
 
-    
     public List<HistorijaResponseDTO> dohvatiHistoriju(Long prijavaId) {
         if (!prijavaRepo.existsById(prijavaId)) {
             throw new ResourceNotFoundException("Prijava " + prijavaId + " nije pronadjena");
@@ -65,7 +66,6 @@ public class KomentarService {
         return dto;
     }
 
-    
     private HistorijaResponseDTO mapHistorijaToResponse(HistorijaPrijave h) {
         return new HistorijaResponseDTO(
                 h.getId(),

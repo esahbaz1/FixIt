@@ -36,7 +36,7 @@ class KorisnikControllerTest {
         korisnikRepository.deleteAll();
     }
 
-    // Uloga je uklonjena iz DTO — svaki novi korisnik je automatski GRADJANIN
+    // Uloga je uklonjena iz DTO - svaki novi korisnik je automatski GRADJANIN
     private RegistracijaRequestDTO validRegistracija(String email) {
         RegistracijaRequestDTO dto = new RegistracijaRequestDTO();
         dto.setIme("Ana");

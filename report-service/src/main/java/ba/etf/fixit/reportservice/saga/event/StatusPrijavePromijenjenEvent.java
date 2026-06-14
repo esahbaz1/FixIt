@@ -6,20 +6,22 @@ import java.time.LocalDateTime;
 public class StatusPrijavePromijenjenEvent implements Serializable {
 
     private Long prijavaId;
-    private Long korisnikId;
+    private Long korisnikId;        // podnosilac prijave
+    private Long odgovornoLiceId;   // radnik dodijeljen (može biti null)
     private String stariStatus;
     private String noviStatus;
     private String naslovPrijave;
     private LocalDateTime vrijemePromjene;
-    private String sagaId; // korelacijski ID za praćenje sage
+    private String sagaId;
 
     public StatusPrijavePromijenjenEvent() {}
 
-    public StatusPrijavePromijenjenEvent(Long prijavaId, Long korisnikId,
+    public StatusPrijavePromijenjenEvent(Long prijavaId, Long korisnikId, Long odgovornoLiceId,
                                          String stariStatus, String noviStatus,
                                          String naslovPrijave, String sagaId) {
         this.prijavaId = prijavaId;
         this.korisnikId = korisnikId;
+        this.odgovornoLiceId = odgovornoLiceId;
         this.stariStatus = stariStatus;
         this.noviStatus = noviStatus;
         this.naslovPrijave = naslovPrijave;
@@ -32,6 +34,9 @@ public class StatusPrijavePromijenjenEvent implements Serializable {
 
     public Long getKorisnikId() { return korisnikId; }
     public void setKorisnikId(Long korisnikId) { this.korisnikId = korisnikId; }
+
+    public Long getOdgovornoLiceId() { return odgovornoLiceId; }
+    public void setOdgovornoLiceId(Long odgovornoLiceId) { this.odgovornoLiceId = odgovornoLiceId; }
 
     public String getStariStatus() { return stariStatus; }
     public void setStariStatus(String stariStatus) { this.stariStatus = stariStatus; }

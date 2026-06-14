@@ -48,7 +48,7 @@ public class NotifikacijaController {
     }
 
     @Operation(summary = "Kreiraj novu notifikaciju",
-               description = "Kreira novu notifikaciju za korisnika. korisnikId i prijavaId su reference na entitete iz других servisa.")
+               description = "Kreira novu notifikaciju za korisnika. korisnikId i prijavaId su reference na entitete iz ?????? servisa.")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Notifikacija uspješno kreirana"),
         @ApiResponse(responseCode = "400", description = "Nevalidni podaci (nedostaje naslov, tip, korisnikId)")

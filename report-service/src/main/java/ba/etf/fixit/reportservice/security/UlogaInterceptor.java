@@ -13,11 +13,11 @@ import java.util.Arrays;
  * Kontrola pristupa za report-service.
  *
  * Pravila:
- *  - GET /api/prijave/** — svi autentificirani (GRADJANIN moze vidjeti prijave)
- *  - POST /api/prijave  — GRADJANIN, RADNIK, RUKOVODILAC, ADMIN (kreiranje prijave)
- *  - PUT/PATCH /api/prijave/** — RADNIK, RUKOVODILAC, ADMIN (izmjena statusa)
- *  - DELETE /api/prijave/** — RUKOVODILAC, ADMIN
- *  - POST /api/prijave/{id}/komentari — svi autentificirani
+ *  - GET /api/prijave/** - svi autentificirani (GRADJANIN moze vidjeti prijave)
+ *  - POST /api/prijave  - GRADJANIN, RADNIK, RUKOVODILAC, ADMIN (kreiranje prijave)
+ *  - PUT/PATCH /api/prijave/** - RADNIK, RUKOVODILAC, ADMIN (izmjena statusa)
+ *  - DELETE /api/prijave/** - RUKOVODILAC, ADMIN
+ *  - POST /api/prijave/{id}/komentari - svi autentificirani
  */
 @Component
 public class UlogaInterceptor implements HandlerInterceptor {
@@ -40,7 +40,7 @@ public class UlogaInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // Brisanje prijave — samo RUKOVODILAC i ADMIN
+        // Brisanje prijave - samo RUKOVODILAC i ADMIN
         if ("DELETE".equals(metoda) && putanja.matches("/api/prijave/\\d+")) {
             if (!imaUlogu(uloga, "RUKOVODILAC", "ADMIN")) {
                 pisGresku(response, HttpStatus.FORBIDDEN, "Brisanje prijava dozvoljeno samo RUKOVODILAC/ADMIN");
@@ -48,7 +48,7 @@ public class UlogaInterceptor implements HandlerInterceptor {
             }
         }
 
-        // Izmjena statusa prijave — RADNIK, RUKOVODILAC, ADMIN
+        // Izmjena statusa prijave - RADNIK, RUKOVODILAC, ADMIN
         if (("PUT".equals(metoda) || "PATCH".equals(metoda)) && putanja.matches("/api/prijave/\\d+.*")) {
             if (!imaUlogu(uloga, "RADNIK", "RUKOVODILAC", "ADMIN")) {
                 pisGresku(response, HttpStatus.FORBIDDEN,

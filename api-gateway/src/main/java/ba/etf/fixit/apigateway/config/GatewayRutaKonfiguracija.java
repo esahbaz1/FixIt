@@ -14,10 +14,10 @@ import java.util.List;
  * Konfiguracija ruta za Spring Cloud Gateway.
  *
  * JAVNI ENDPOINTI (bez JWT-a):
- *  POST /api/auth/registracija  — kreiranje racuna
- *  POST /api/auth/prijava       — prijava, dobivanje tokena
- *  POST /api/auth/refresh       — osvjezavanje access tokena
- *  POST /api/auth/odjava        — odjava, invalidacija refresh tokena
+ *  POST /api/auth/registracija  - kreiranje racuna
+ *  POST /api/auth/prijava       - prijava, dobivanje tokena
+ *  POST /api/auth/refresh       - osvjezavanje access tokena
+ *  POST /api/auth/odjava        - odjava, invalidacija refresh tokena
  */
 @Configuration
 public class GatewayRutaKonfiguracija {

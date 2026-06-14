@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class SagaOdgovorListener {
@@ -33,55 +32,61 @@ public class SagaOdgovorListener {
         this.statusiRepository = statusiRepository;
     }
 
-
     @RabbitListener(queues = RabbitMQKonfiguracija.NOTIFIKACIJA_KREIRANA_QUEUE)
-    @Transactional
     public void handleNotifikacijaKreirana(NotifikacijaKreiranaEvent event) {
-        log.info("[SAGA] ✅ Notifikacija kreirana. sagaId={}, prijavaId={}, notifikacijaId={}",
+        log.info("[SAGA] Notifikacija kreirana. sagaId={}, prijavaId={}, notifikacijaId={}",
                 event.getSagaId(), event.getPrijavaId(), event.getNotifikacijaId());
 
         sagaLogRepository.findById(event.getSagaId()).ifPresent(sagaLog -> {
             sagaLog.setStatus(SagaLog.SagaStatus.COMPLETED);
             sagaLogRepository.save(sagaLog);
-            log.info("[SAGA] ✅ Saga {} označena kao COMPLETED (finalna).", event.getSagaId());
+            log.info("[SAGA] Saga {} oznacena kao COMPLETED.", event.getSagaId());
         });
     }
 
     @RabbitListener(queues = RabbitMQKonfiguracija.NOTIFIKACIJA_GRESKA_QUEUE)
-    @Transactional
     public void handleNotifikacijaGreska(KreiranjeNotifikacijeNijeUspiloEvent event) {
-        log.warn("[SAGA] ❌ Kreiranje notifikacije nije uspjelo. sagaId={}, razlog={}",
+        log.warn("[SAGA] Kreiranje notifikacije nije uspjelo. sagaId={}, razlog={}",
                 event.getSagaId(), event.getRazlogGreske());
 
         sagaLogRepository.findById(event.getSagaId()).ifPresent(sagaLog -> {
             try {
-            
-                Prijava prijava = prijavaRepository.findById(event.getPrijavaId())
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Prijava " + event.getPrijavaId() + " nije pronađena za kompenzaciju"));
+                // Za dodjelu radnika nema kompenzacije statusa - samo logujemo
+                boolean jeDodjela = "DODJELA_RADNIKU".equals(sagaLog.getNoviStatus());
+                if (jeDodjela) {
+                    log.warn("[SAGA] Greska pri notifikaciji dodjele radnika - nema kompenzacije statusa. sagaId={}",
+                            event.getSagaId());
+                    sagaLog.setStatus(SagaLog.SagaStatus.COMPENSATED);
+                    sagaLog.setRazlogKompenzacije(event.getRazlogGreske());
+                    sagaLogRepository.save(sagaLog);
+                    return;
+                }
 
+                // Kompenzacija za promjenu statusa - vrati stari status
                 String statusNaVratiti = event.getStatusNaKojiVratiti() != null
                         ? event.getStatusNaKojiVratiti()
                         : sagaLog.getStariStatus();
 
                 if (statusNaVratiti != null) {
+                    Prijava prijava = prijavaRepository.findById(event.getPrijavaId())
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Prijava " + event.getPrijavaId() + " nije pronadjena za kompenzaciju"));
                     Statusi stariStatus = statusiRepository.findByNaziv(statusNaVratiti)
                             .orElseThrow(() -> new ResourceNotFoundException(
-                                    "Status '" + statusNaVratiti + "' nije pronađen"));
+                                    "Status '" + statusNaVratiti + "' nije pronadjen"));
                     prijava.setStatus(stariStatus);
                     prijavaRepository.save(prijava);
-                    log.warn("[SAGA] 🔄 Kompenzacija: Status prijave {} vraćen na '{}'.",
+                    log.warn("[SAGA] Kompenzacija: Status prijave {} vracen na '{}'.",
                             prijava.getId(), statusNaVratiti);
                 }
 
                 sagaLog.setStatus(SagaLog.SagaStatus.COMPENSATED);
                 sagaLog.setRazlogKompenzacije(event.getRazlogGreske());
                 sagaLogRepository.save(sagaLog);
-                log.warn("[SAGA] 🔄 Saga {} označena kao COMPENSATED.", event.getSagaId());
+                log.warn("[SAGA] Saga {} oznacena kao COMPENSATED.", event.getSagaId());
 
             } catch (Exception e) {
-                log.error("[SAGA] ❌ Greška tokom kompenzacije za sagaId={}: {}",
-                        event.getSagaId(), e.getMessage());
+                log.error("[SAGA] Greska tokom kompenzacije za sagaId={}: {}", event.getSagaId(), e.getMessage());
             }
         });
     }

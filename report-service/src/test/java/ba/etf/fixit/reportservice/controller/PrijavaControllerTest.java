@@ -83,6 +83,9 @@ class PrijavaControllerTest {
         when(userServiceKlijent.validirajKorisnika(anyLong())).thenReturn(aktivanKorisnik);
     }
 
+    /**
+     * Pravi DTO za prijavu - bez korisnikId (dolazi iz tokena/konteksta).
+     */
     private PrijavaRequestDTO validPrijavaDto(String naslov) {
         PrijavaRequestDTO dto = new PrijavaRequestDTO();
         dto.setNaslov(naslov);
@@ -91,28 +94,32 @@ class PrijavaControllerTest {
         dto.setLongitude(18.41);
         dto.setAdresa("Titova ulica, Sarajevo");
         dto.setKategorijaId(kategorijaId);
-        dto.setKorisnikId(1L);
         dto.setPrioritet(PrioritetPrijave.SREDNJI);
         return dto;
     }
 
+    /**
+     * Kreira prijavu i vraća prijavaId iz 202 Accepted odgovora.
+     * Kontroler sada vraća {"prijavaId": X, "status": "POKRENUTO", "poruka": "..."}.
+     */
     private Long kreirajPrijavu(String naslov) throws Exception {
         String response = mockMvc.perform(post("/api/prijave")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validPrijavaDto(naslov))))
-                .andExpect(status().isCreated())
+                .andExpect(status().isAccepted())
                 .andReturn().getResponse().getContentAsString();
-        return objectMapper.readTree(response).get("id").asLong();
+        return objectMapper.readTree(response).get("prijavaId").asLong();
     }
 
     @Test
-    void kreirajPrijavu_uspjesno() throws Exception {
+    void kreirajPrijavu_uspjesno_vraca202() throws Exception {
         mockMvc.perform(post("/api/prijave")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validPrijavaDto("Test rupa na putu"))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.naslov").value("Test rupa na putu"))
-                .andExpect(jsonPath("$.statusNaziv").value("Novo"));
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.prijavaId").exists())
+                .andExpect(jsonPath("$.status").value("POKRENUTO"))
+                .andExpect(jsonPath("$.poruka").exists());
     }
 
     @Test
@@ -156,15 +163,14 @@ class PrijavaControllerTest {
     }
 
     @Test
-    void promijeniStatus_uspjesno() throws Exception {
+    void promijeniStatus_uspjesno_vraca202() throws Exception {
         Long id = kreirajPrijavu("Status test");
 
         mockMvc.perform(patch("/api/prijave/" + id + "/status")
-                        .param("noviStatus", "Rijeseno")
-                        .param("korisnikId", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.statusNaziv").value("Rijeseno"));
+                        .param("noviStatus", "Rijeseno"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.prijavaId").value(id))
+                .andExpect(jsonPath("$.status").value("POKRENUTO"));
     }
 
     @Test
@@ -172,8 +178,7 @@ class PrijavaControllerTest {
         Long id = kreirajPrijavu("Status not found test");
 
         mockMvc.perform(patch("/api/prijave/" + id + "/status")
-                        .param("noviStatus", "Nepostojeci")
-                        .param("korisnikId", "1"))
+                        .param("noviStatus", "Nepostojeci"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
     }
@@ -208,7 +213,7 @@ class PrijavaControllerTest {
         mockMvc.perform(post("/api/prijave")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
 
         mockMvc.perform(get("/api/prijave/hitne-prekoracene"))
                 .andExpect(status().isOk())
@@ -316,8 +321,8 @@ class PrijavaControllerTest {
     @Test
     void komentari_uspjesno() throws Exception {
         Long id = kreirajPrijavu("Komentari test");
+        // korisnikId se ne šalje u body - dolazi iz autentifikovanog konteksta (header X-Korisnik-Id)
         KomentarRequestDTO komentar = new KomentarRequestDTO();
-        komentar.setKorisnikId(1L);
         komentar.setTekst("Javni komentar");
         komentar.setInteran(false);
 
@@ -343,7 +348,6 @@ class PrijavaControllerTest {
     void dodajKomentar_uspjesno() throws Exception {
         Long id = kreirajPrijavu("Dodaj komentar test");
         KomentarRequestDTO komentar = new KomentarRequestDTO();
-        komentar.setKorisnikId(1L);
         komentar.setNaslov("Naslov komentara");
         komentar.setTekst("Tekst komentara");
         komentar.setInteran(false);
@@ -360,7 +364,6 @@ class PrijavaControllerTest {
     void dodajKomentar_bezTeksta_vraca400() throws Exception {
         Long id = kreirajPrijavu("Komentar validacija");
         KomentarRequestDTO komentar = new KomentarRequestDTO();
-        komentar.setKorisnikId(1L);
         komentar.setTekst("");
 
         mockMvc.perform(post("/api/prijave/" + id + "/komentari")
@@ -373,7 +376,6 @@ class PrijavaControllerTest {
     @Test
     void dodajKomentar_prijavaNePostoji_vraca404() throws Exception {
         KomentarRequestDTO komentar = new KomentarRequestDTO();
-        komentar.setKorisnikId(1L);
         komentar.setTekst("Tekst komentara");
         komentar.setInteran(false);
 
@@ -384,18 +386,21 @@ class PrijavaControllerTest {
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
     }
 
-
     @Test
     void kreirajPrijavu_korisnikNijePronadjen_vraca404() throws Exception {
+        // Simuliramo da se korisnikId 999 šalje kroz header (kontekst), ne kroz body
         when(userServiceKlijent.validirajKorisnika(999L))
                 .thenThrow(new UserServiceKlijent.KorisnikNijePronadjenException("Korisnik 999 nije pronadjen"));
 
-        PrijavaRequestDTO dto = validPrijavaDto("Test nepostojeci korisnik");
-        dto.setKorisnikId(999L);
-
+        // Ovaj test zahtijeva da test infra postavi X-Korisnik-Id: 999 header
+        // Bez toga, KorisnikKontekst.korisnikId() vraća null pa će validacija koristiti null
+        // Test ostaje kao dokumentacija ponašanja - u produkciji gateway uvijek šalje ID
         mockMvc.perform(post("/api/prijave")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
+                        .header("X-Korisnik-Id", "999")
+                        .header("X-Korisnik-Email", "test@test.ba")
+                        .header("X-Korisnik-Uloga", "GRADJANIN")
+                        .content(objectMapper.writeValueAsString(validPrijavaDto("Test nepostojeci korisnik"))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("KORISNIK_NOT_FOUND"));
     }
@@ -405,24 +410,25 @@ class PrijavaControllerTest {
         when(userServiceKlijent.validirajKorisnika(2L))
                 .thenThrow(new UserServiceKlijent.KorisnikNijeAktivanException("Korisnik 2 je deaktiviran"));
 
-        PrijavaRequestDTO dto = validPrijavaDto("Test neaktivan korisnik");
-        dto.setKorisnikId(2L);
-
         mockMvc.perform(post("/api/prijave")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
+                        .header("X-Korisnik-Id", "2")
+                        .header("X-Korisnik-Email", "test@test.ba")
+                        .header("X-Korisnik-Uloga", "GRADJANIN")
+                        .content(objectMapper.writeValueAsString(validPrijavaDto("Test neaktivan korisnik"))))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.greska").value("KORISNIK_NIJE_AKTIVAN"));
     }
 
     @Test
-    void kreirajPrijavu_userServiceNedostupan_gracefulDegradation_vraca201() throws Exception {
+    void kreirajPrijavu_userServiceNedostupan_gracefulDegradation_vraca202() throws Exception {
         when(userServiceKlijent.validirajKorisnika(anyLong())).thenReturn(null);
 
         mockMvc.perform(post("/api/prijave")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validPrijavaDto("Test graceful"))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.naslov").value("Test graceful"));
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.prijavaId").exists())
+                .andExpect(jsonPath("$.status").value("POKRENUTO"));
     }
 }

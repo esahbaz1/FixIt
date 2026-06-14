@@ -15,10 +15,10 @@ import java.util.Date;
 /**
  * Pomocna klasa za rad sa JWT tokenima na nivou gatewaya.
  *
- * Gateway SAMO VERIFICIRA access tokene — nikad ih ne kreira.
+ * Gateway SAMO VERIFICIRA access tokene - nikad ih ne kreira.
  * Kreiranje tokena vrsi se iskljucivo u user-service pomocu privatnog kljuca.
  *
- * Gateway ima samo JAVNI kljuc (RS256) — kompromitovanje gatewaya ne daje
+ * Gateway ima samo JAVNI kljuc (RS256) - kompromitovanje gatewaya ne daje
  * mogucnost kreiranja laznih tokena.
  */
 @Component

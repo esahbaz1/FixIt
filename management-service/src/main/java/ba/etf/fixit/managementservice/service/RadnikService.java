@@ -87,7 +87,7 @@ public class RadnikService {
             dto.setIme(korisnik.getIme());
             dto.setPrezime(korisnik.getPrezime());
         } else {
-            // Fallback – korisnik nije dostupan, prikaži ID
+            // Fallback - korisnik nije dostupan, prikaži ID
             dto.setIme("Korisnik #" + r.getKorisnikId());
             dto.setPrezime("");
         }

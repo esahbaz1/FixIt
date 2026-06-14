@@ -22,7 +22,7 @@ public class KorisnikController {
         this.korisnikService = korisnikService;
     }
 
-    // ─── JAVNI ENDPOINTI ─────────────────────────────────────────────────────
+    // --- JAVNI ENDPOINTI -----------------------------------------------------
 
     @PostMapping("/api/auth/registracija")
     public ResponseEntity<KorisnikResponseDTO> registruj(
@@ -49,7 +49,7 @@ public class KorisnikController {
         return ResponseEntity.noContent().build();
     }
 
-    // ─── ZASTICENI ENDPOINTI ─────────────────────────────────────────────────
+    // --- ZASTICENI ENDPOINTI -------------------------------------------------
 
     @GetMapping("/api/korisnici")
     public ResponseEntity<List<KorisnikResponseDTO>> dohvatiSve() {
@@ -100,7 +100,7 @@ public class KorisnikController {
         return ResponseEntity.ok(korisnikService.aktivniPoUlozi(uloga));
     }
 
-    // ─── POMOCNA METODA ───────────────────────────────────────────────────────
+    // --- POMOCNA METODA -------------------------------------------------------
 
     private void provjeriUlogu(HttpServletRequest request, String... dozvoljeneUloge) {
         String uloga = request.getHeader("X-Korisnik-Uloga");

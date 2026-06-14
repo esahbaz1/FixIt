@@ -1,31 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import T from "../styles/tokens";
 import Icon from "./Icon";
 import { useAuth } from "../context/AuthContext";
-import { apiCall } from "../api/client";
+import { useNotifications } from "../context/useNotifications";
 
 export default function AppShell({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [notifCount, setNotifCount] = useState(0);
+  const { notifCount, resetCount } = useNotifications();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const fetchNotif = () => {
-      apiCall(`/api/notifikacije/korisnik/${user.id}/broj-neprocitanih`)
-        .then((d) => setNotifCount(d?.brojNeprocitanih || 0))
-        .catch(() => {});
-    };
-    fetchNotif();
-    const interval = setInterval(fetchNotif, 30000);
-    return () => clearInterval(interval);
-  }, [user?.id]);
-
   const handleTab = (path) => {
-    if (path === "/notifikacije") setNotifCount(0);
+    if (path === "/notifikacije") resetCount();
     setMobileMenuOpen(false);
     navigate(path);
   };
@@ -57,7 +45,7 @@ export default function AppShell({ children }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header className="app-header">
-       
+
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 26, height: 26, borderRadius: 6, background: "#2ECC71", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
@@ -70,7 +58,6 @@ export default function AppShell({ children }) {
 
         <div className="divider" />
 
-      
         <nav className="desktop-nav" style={{ display: "flex", gap: 2 }}>
           {nav.map(({ path, label, Icon: Ic, badge }) => (
             <button key={path} onClick={() => handleTab(path)} className={`nav-btn ${isActive(path) ? "active" : ""}`} style={{ position: "relative" }}>
@@ -85,7 +72,7 @@ export default function AppShell({ children }) {
         </nav>
 
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          
+
           <div className="user-pill" style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px 4px 6px", background: T.bgRaised, border: `1px solid ${T.line}`, borderRadius: 100 }}>
             <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(46,204,113,0.2)", border: "1px solid rgba(46,204,113,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: "#2ECC71" }}>
               {(user?.ime?.[0] || user?.email?.[0] || "U").toUpperCase()}
@@ -104,7 +91,6 @@ export default function AppShell({ children }) {
             <Icon.LogOut /> <span className="logout-text">Odjava</span>
           </button>
 
-         
           <button
             className="hamburger-btn"
             onClick={() => setMobileMenuOpen(v => !v)}
@@ -113,20 +99,15 @@ export default function AppShell({ children }) {
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               {mobileMenuOpen ? (
-                <>
-                  <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </>
+                <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               ) : (
-                <>
-                  <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </>
+                <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               )}
             </svg>
           </button>
         </div>
       </header>
 
-     
       {mobileMenuOpen && (
         <div className="mobile-nav-overlay" onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", top: 52, left: 0, right: 0, bottom: 0, zIndex: 99 }}>
           <nav

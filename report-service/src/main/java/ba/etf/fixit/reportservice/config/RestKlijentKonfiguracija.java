@@ -12,7 +12,7 @@ import org.springframework.web.client.RestTemplate;
 public class RestKlijentKonfiguracija {
 
     /**
-     * Plain RestTemplate sa Apache HttpClient — podrzava PATCH, koristi direktan URL.
+     * Plain RestTemplate sa Apache HttpClient - podrzava PATCH, koristi direktan URL.
      */
     @Bean
     public RestTemplate directRestTemplate() {

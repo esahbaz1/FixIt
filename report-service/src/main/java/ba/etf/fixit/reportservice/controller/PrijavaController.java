@@ -2,6 +2,7 @@ package ba.etf.fixit.reportservice.controller;
 
 import ba.etf.fixit.reportservice.dto.*;
 import ba.etf.fixit.reportservice.repository.PrijavaRepository;
+import ba.etf.fixit.reportservice.security.KorisnikKontekst;
 import ba.etf.fixit.reportservice.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -25,9 +26,9 @@ public class PrijavaController {
     private final PrijavaService prijavaService;
     private final KomentarService komentarService;
     private final PrijavaRepository prijavaRepo;
-    private final ValidacijaService validacijaService;       
-    private final FotografijaService fotografijaService;    
-    private final StatistikaService statistikaService;      
+    private final ValidacijaService validacijaService;
+    private final FotografijaService fotografijaService;
+    private final StatistikaService statistikaService;
 
     public PrijavaController(PrijavaService prijavaService,
                               KomentarService komentarService,
@@ -43,7 +44,7 @@ public class PrijavaController {
         this.statistikaService = statistikaService;
     }
 
-    // ─── OSNOVNI CRUD ────────────────────────────────────────────────────────
+    // --- OSNOVNI CRUD --------------------------------------------------------
 
     @Operation(summary = "Dohvati sve aktivne prijave")
     @GetMapping
@@ -59,17 +60,20 @@ public class PrijavaController {
 
     @Operation(summary = "Kreiraj novu prijavu")
     @PostMapping
-    public ResponseEntity<PrijavaResponseDTO> kreiraj(@Valid @RequestBody PrijavaRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(prijavaService.kreiraj(dto));
+    public ResponseEntity<Map<String, Object>> kreiraj(@Valid @RequestBody PrijavaRequestDTO dto) {
+        Long korisnikId = KorisnikKontekst.korisnikId();
+        Map<String, Object> odgovor = prijavaService.kreirajAsync(dto, korisnikId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(odgovor);
     }
 
-    @Operation(summary = "Promijeni status prijave")
+    @Operation(summary = "Promijeni status prijave (asinhro?? - pokreće SAGA)")
     @PatchMapping("/{id}/status")
-    public ResponseEntity<PrijavaResponseDTO> promijeniStatus(
+    public ResponseEntity<Map<String, Object>> promijeniStatus(
             @PathVariable Long id,
-            @RequestParam String noviStatus,
-            @RequestParam Long korisnikId) {
-        return ResponseEntity.ok(prijavaService.promijeniStatus(id, noviStatus, korisnikId));
+            @RequestParam String noviStatus) {
+        Long korisnikId = KorisnikKontekst.korisnikId();
+        Map<String, Object> odgovor = prijavaService.promijeniStatusAsync(id, noviStatus, korisnikId);
+        return ResponseEntity.accepted().body(odgovor);
     }
 
     @Operation(summary = "Parcijalno azuriraj prijavu")
@@ -87,9 +91,8 @@ public class PrijavaController {
         return ResponseEntity.noContent().build();
     }
 
-    
     @Operation(summary = "Dodijeli prijavu gradskoj sluzbi",
-               description = "Admin dodjeljuje prijavu nadleznoj gradskoj sluzbi. Automatski mijenja status u 'Dodijeljeno' ako je bio 'Novo'.")
+               description = "Admin dodjeljuje prijavu nadleznoj gradskoj sluzbi.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Prijava dodijeljena sluzbi"),
         @ApiResponse(responseCode = "404", description = "Prijava nije pronadjena")
@@ -101,9 +104,8 @@ public class PrijavaController {
         return ResponseEntity.ok(prijavaService.dodijeliSluzbu(id, sluzbaId));
     }
 
-    
     @Operation(summary = "Dodijeli radnika na prijavu",
-               description = "Rukovodilac dodjeljuje konkretnog radnika (po korisnikId) kao odgovorno lice za rjesavanje prijave.")
+               description = "Rukovodilac dodjeljuje konkretnog radnika kao odgovorno lice.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Radnik dodijeljen"),
         @ApiResponse(responseCode = "404", description = "Prijava nije pronadjena")
@@ -115,7 +117,7 @@ public class PrijavaController {
         return ResponseEntity.ok(prijavaService.dodijeliRadnika(id, korisnikId));
     }
 
-    // ─── PRETRAGA / FILTERI ───────────────────────────────────────────────────
+    // --- PRETRAGA / FILTERI ---------------------------------------------------
 
     @GetMapping("/pretraga")
     public ResponseEntity<List<PrijavaResponseDTO>> pretrazi(@RequestParam String q) {
@@ -146,7 +148,7 @@ public class PrijavaController {
         return ResponseEntity.ok(prijavaService.dohvatiSvePaged(page, size, sortBy));
     }
 
-    // ─── HEATMAP / DASHBOARD ─────────────────────────────────────────────────
+    // --- HEATMAP / DASHBOARD -------------------------------------------------
 
     @Operation(summary = "Podaci za heatmapu")
     @GetMapping("/heatmap")
@@ -173,15 +175,13 @@ public class PrijavaController {
         return ResponseEntity.ok(d);
     }
 
-    
-    @Operation(summary = "Detaljna statistika i izvjestaji",
-               description = "Vraca broj prijava po kategorijama, statusima, trendove po mjesecima i prosjecno vrijeme rjesavanja.")
+    @Operation(summary = "Detaljna statistika i izvjestaji")
     @GetMapping("/statistika")
     public ResponseEntity<StatistikaResponseDTO> statistika() {
         return ResponseEntity.ok(statistikaService.dohvatiStatistiku());
     }
 
-    // ─── KOMENTARI ───────────────────────────────────────────────────────────
+    // --- KOMENTARI -----------------------------------------------------------
 
     @Operation(summary = "Dohvati javne komentare prijave")
     @GetMapping("/{id}/komentari")
@@ -189,9 +189,7 @@ public class PrijavaController {
         return ResponseEntity.ok(komentarService.dohvatiJavne(id));
     }
 
-    
-    @Operation(summary = "Dohvati interne komentare prijave",
-               description = "Vidljivo samo zaposlenima sluzbe i adminima.")
+    @Operation(summary = "Dohvati interne komentare prijave")
     @GetMapping("/{id}/komentari/interni")
     public ResponseEntity<List<KomentarResponseDTO>> interniKomentari(@PathVariable Long id) {
         return ResponseEntity.ok(komentarService.dohvatiInterne(id));
@@ -202,12 +200,11 @@ public class PrijavaController {
     public ResponseEntity<KomentarResponseDTO> dodajKomentar(
             @PathVariable Long id,
             @Valid @RequestBody KomentarRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(komentarService.dodaj(id, dto));
+        Long korisnikId = KorisnikKontekst.korisnikId();
+        return ResponseEntity.status(HttpStatus.CREATED).body(komentarService.dodaj(id, dto, korisnikId));
     }
 
-    
-    @Operation(summary = "Dohvati historiju (timeline) prijave",
-               description = "Vraca kompletan audit log svih promjena statusa, sortiran od najstarijeg ka najnovijem.")
+    @Operation(summary = "Dohvati historiju (timeline) prijave")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista historije"),
         @ApiResponse(responseCode = "404", description = "Prijava nije pronadjena")
@@ -217,9 +214,7 @@ public class PrijavaController {
         return ResponseEntity.ok(komentarService.dohvatiHistoriju(id));
     }
 
-    
-    @Operation(summary = "Dodaj fotografije na prijavu",
-               description = "Upload do 5 fotografija. Prihvata multipart/form-data sa poljem 'fajlovi'.")
+    @Operation(summary = "Dodaj fotografije na prijavu")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Fotografije uspjesno dodane"),
         @ApiResponse(responseCode = "400", description = "Previsen broj fotografija ili nevalidan fajl"),
@@ -239,9 +234,7 @@ public class PrijavaController {
         return ResponseEntity.ok(fotografijaService.dohvatiFotografije(id));
     }
 
-    
-    @Operation(summary = "Validiraj prijavu (glasanje zajednice)",
-               description = "Registrovani korisnik potvrdjuje ili osporava postojanje prijavljenog problema.")
+    @Operation(summary = "Validiraj prijavu (glasanje zajednice)")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Glas uspjesno zabiljezan"),
         @ApiResponse(responseCode = "404", description = "Prijava nije pronadjena")
@@ -250,10 +243,10 @@ public class PrijavaController {
     public ResponseEntity<ValidacijaResponseDTO> validiraj(
             @PathVariable Long id,
             @Valid @RequestBody ValidacijaRequestDTO dto) {
-        return ResponseEntity.ok(validacijaService.validiraj(id, dto));
+        Long korisnikId = KorisnikKontekst.korisnikId();
+        return ResponseEntity.ok(validacijaService.validiraj(id, dto, korisnikId));
     }
 
-    
     @Operation(summary = "Dohvati statistiku glasanja za prijavu")
     @GetMapping("/{id}/validacija")
     public ResponseEntity<ValidacijaStatistikaDTO> validacijaStatistika(@PathVariable Long id) {

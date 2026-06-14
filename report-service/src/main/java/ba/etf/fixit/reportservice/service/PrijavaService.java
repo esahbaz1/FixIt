@@ -18,9 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,17 +38,14 @@ public class PrijavaService {
     private final RabbitTemplate rabbitTemplate;
     private final SagaLogRepository sagaLogRepository;
 
-    public PrijavaService(
-            PrijavaRepository prijavaRepo,
-            KategorijaRepository kategorijaRepo,
-            StatusiRepository statusiRepo,
-            TipPromjeneRepository tipPromjeneRepo,
-            HistorijaPrijaveRepository historijaPrijaveRepo,
-            FotografijaRepository fotografijaRepo,
-            UserServiceKlijent userServiceKlijent,
-            ManagementServiceKlijent managementServiceKlijent,
-            RabbitTemplate rabbitTemplate,
-            SagaLogRepository sagaLogRepository) {
+    public PrijavaService(PrijavaRepository prijavaRepo, KategorijaRepository kategorijaRepo,
+                          StatusiRepository statusiRepo, TipPromjeneRepository tipPromjeneRepo,
+                          HistorijaPrijaveRepository historijaPrijaveRepo,
+                          FotografijaRepository fotografijaRepo,
+                          UserServiceKlijent userServiceKlijent,
+                          ManagementServiceKlijent managementServiceKlijent,
+                          RabbitTemplate rabbitTemplate,
+                          SagaLogRepository sagaLogRepository) {
         this.prijavaRepo = prijavaRepo;
         this.kategorijaRepo = kategorijaRepo;
         this.statusiRepo = statusiRepo;
@@ -64,16 +59,17 @@ public class PrijavaService {
     }
 
     public List<PrijavaResponseDTO> dohvatiSve() {
-        return prijavaRepo.findByArhiviranFalse().stream().map(this::mapToResponse).collect(Collectors.toList());
+        return prijavaRepo.findByArhiviranFalse().stream()
+                .map(this::mapToResponse).collect(Collectors.toList());
     }
 
     public PrijavaResponseDTO dohvatiPoId(Long id) {
         return mapToResponse(nadji(id));
     }
 
-    public PrijavaResponseDTO kreiraj(PrijavaRequestDTO dto) {
-        userServiceKlijent.validirajKorisnika(dto.getKorisnikId());
-        log.info("Kreiranje prijave za korisnikId={}", dto.getKorisnikId());
+    /** Kreira prijavu i vraca 202 potvrdu. Korisnik prima notifikaciju kada je obradjena. */
+    public Map<String, Object> kreirajAsync(PrijavaRequestDTO dto, Long korisnikId) {
+        userServiceKlijent.validirajKorisnika(korisnikId);
 
         Kategorija kat = kategorijaRepo.findById(dto.getKategorijaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Kategorija " + dto.getKategorijaId() + " nije pronadjena"));
@@ -87,15 +83,22 @@ public class PrijavaService {
         p.setLongitude(dto.getLongitude());
         p.setAdresa(dto.getAdresa());
         p.setKategorija(kat);
-        p.setKorisnikId(dto.getKorisnikId());
+        p.setKorisnikId(korisnikId);
         p.setStatus(status);
         if (dto.getPrioritet() != null) p.setPrioritet(dto.getPrioritet());
         if (dto.getDatumRoka() != null) p.setDatumRoka(dto.getDatumRoka());
 
-        return mapToResponse(prijavaRepo.save(p));
+        Prijava sacuvana = prijavaRepo.save(p);
+        log.info("Prijava kreirana id={}", sacuvana.getId());
+
+        return odgovorPokrenut(sacuvana.getId(), null);
     }
 
-    public PrijavaResponseDTO promijeniStatus(Long id, String noviStatusNaziv, Long korisnikId) {
+    /**
+     * Pokrace SAGA za promjenu statusa.
+     * Event nosi i odgovornoLiceId da notification-service moze obavijestiti i radnika.
+     */
+    public Map<String, Object> promijeniStatusAsync(Long id, String noviStatusNaziv, Long korisnikId) {
         Prijava p = nadji(id);
         Statusi stariStatus = p.getStatus();
         Statusi novi = statusiRepo.findByNaziv(noviStatusNaziv)
@@ -112,41 +115,29 @@ public class PrijavaService {
         TipPromjene tip = tipPromjeneRepo.findByStatus1AndStatus2(stariNaziv, noviStatusNaziv)
                 .orElseGet(() -> tipPromjeneRepo.save(new TipPromjene(null, stariNaziv, noviStatusNaziv)));
 
-        Prijava savedPrijava = prijavaRepo.save(p);
+        Prijava saved = prijavaRepo.save(p);
 
         HistorijaPrijave h = new HistorijaPrijave();
-        h.setPrijava(savedPrijava);
+        h.setPrijava(saved);
         h.setTipPromjene(tip);
         h.setKorisnikId(korisnikId);
         historijaPrijaveRepo.save(h);
 
-        String sagaId = "saga-" + UUID.randomUUID().toString();
-        SagaLog sagaLog = new SagaLog(sagaId, savedPrijava.getId(), stariNaziv, noviStatusNaziv, korisnikId);
-        try {
-            sagaLogRepository.save(sagaLog);
-            log.info("[SAGA] SagaLog sacuvan: {}", sagaId);
-        } catch (Exception e) {
-            log.error("[SAGA] GRESKA pri cuvanju SagaLog-a: {}", e.getMessage(), e);
-            throw e;
-        }
+        String sagaId = "saga-" + UUID.randomUUID();
+        sagaLogRepository.save(new SagaLog(sagaId, saved.getId(), stariNaziv, noviStatusNaziv, korisnikId));
 
         StatusPrijavePromijenjenEvent event = new StatusPrijavePromijenjenEvent(
-                savedPrijava.getId(), savedPrijava.getKorisnikId(),
-                stariNaziv, noviStatusNaziv, savedPrijava.getNaslov(), sagaId);
+                saved.getId(), saved.getKorisnikId(), saved.getOdgovornoLiceId(),
+                stariNaziv, noviStatusNaziv, saved.getNaslov(), sagaId);
 
-        try {
-            rabbitTemplate.convertAndSend(
-                    RabbitMQKonfiguracija.SAGA_EXCHANGE,
-                    RabbitMQKonfiguracija.STATUS_PROMIJENJEN_ROUTING_KEY,
-                    event);
-            log.info("[SAGA] TX1 zavrsena. sagaId={}, prijavaId={}, status: {} -> {}",
-                    sagaId, savedPrijava.getId(), stariNaziv, noviStatusNaziv);
-        } catch (Exception e) {
-            log.error("[SAGA] GRESKA pri slanju RabbitMQ eventa: {}", e.getMessage(), e);
-            throw e;
-        }
+        rabbitTemplate.convertAndSend(
+                RabbitMQKonfiguracija.SAGA_EXCHANGE,
+                RabbitMQKonfiguracija.STATUS_PROMIJENJEN_ROUTING_KEY,
+                event);
 
-        return mapToResponse(savedPrijava);
+        log.info("[SAGA] sagaId={}, prijavaId={}, status: {} -> {}", sagaId, saved.getId(), stariNaziv, noviStatusNaziv);
+
+        return odgovorPokrenut(saved.getId(), sagaId);
     }
 
     public void arhiviraj(Long id) {
@@ -156,11 +147,10 @@ public class PrijavaService {
     }
 
     public PrijavaResponseDTO partialUpdate(Long id, Map<String, Object> fields) {
-        Prijava p = prijavaRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Prijava nije pronadjena"));
-        if (fields.containsKey("naslov")) p.setNaslov((String) fields.get("naslov"));
-        if (fields.containsKey("opis")) p.setOpis((String) fields.get("opis"));
-        if (fields.containsKey("adresa")) p.setAdresa((String) fields.get("adresa"));
+        Prijava p = nadji(id);
+        if (fields.containsKey("naslov"))    p.setNaslov((String) fields.get("naslov"));
+        if (fields.containsKey("opis"))      p.setOpis((String) fields.get("opis"));
+        if (fields.containsKey("adresa"))    p.setAdresa((String) fields.get("adresa"));
         if (fields.containsKey("prioritet")) p.setPrioritet(PrioritetPrijave.valueOf((String) fields.get("prioritet")));
         return mapToResponse(prijavaRepo.save(p));
     }
@@ -168,32 +158,59 @@ public class PrijavaService {
     public PrijavaResponseDTO dodijeliSluzbu(Long prijavaId, Long sluzbaId) {
         Prijava p = nadji(prijavaId);
         p.setGrdSluzbald(sluzbaId);
-        // Automatski prelaz u status "Dodijeljeno" ako je trenutno "Novo"
         if (p.getStatus() != null && "Novo".equals(p.getStatus().getNaziv())) {
             statusiRepo.findByNaziv("Dodijeljeno").ifPresent(p::setStatus);
         }
         return mapToResponse(prijavaRepo.save(p));
     }
 
-    public PrijavaResponseDTO dodijeliRadnika(Long prijavaId, Long korisnikId) {
+    public PrijavaResponseDTO dodijeliRadnika(Long prijavaId, Long radnikId) {
         Prijava p = nadji(prijavaId);
-        p.setOdgovornoLiceId(korisnikId);
-        return mapToResponse(prijavaRepo.save(p));
+        p.setOdgovornoLiceId(radnikId);
+        Prijava saved = prijavaRepo.save(p);
+
+        // Obavijesti radnika putem SAGA eventa
+        String sagaId = "saga-dodjela-" + UUID.randomUUID();
+        sagaLogRepository.save(new SagaLog(sagaId, saved.getId(), null, "DODJELA_RADNIKU", radnikId));
+
+        StatusPrijavePromijenjenEvent event = new StatusPrijavePromijenjenEvent(
+                saved.getId(), saved.getKorisnikId(), radnikId,
+                null, "DODJELA_RADNIKU", saved.getNaslov(), sagaId);
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQKonfiguracija.SAGA_EXCHANGE,
+                RabbitMQKonfiguracija.STATUS_PROMIJENJEN_ROUTING_KEY,
+                event);
+
+        log.info("[DODJELA] Radnik {} dodijeljen prijavi {}", radnikId, saved.getId());
+        return mapToResponse(saved);
     }
+
+    public List<PrijavaResponseDTO> dohvatiSvePaged(int page, int size, String sortBy) {
+        PageRequest pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(sortBy));
+        return prijavaRepo.findByArhiviranFalse(pageable).stream()
+                .map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    public List<PrijavaResponseDTO> hitneSaPrekoracenimRokom() {
+        return prijavaRepo.findHitneSaPrekoracenimRokom(LocalDateTime.now())
+                .stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    // --- Helpers -------------------------------------------------------------
 
     private Prijava nadji(Long id) {
         return prijavaRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Prijava sa ID-em " + id + " nije pronadjena"));
     }
 
-    public List<PrijavaResponseDTO> dohvatiSvePaged(int page, int size, String sortBy) {
-        PageRequest pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(sortBy));
-        return prijavaRepo.findByArhiviranFalse(pageable).stream().map(this::mapToResponse).collect(Collectors.toList());
-    }
-
-    public List<PrijavaResponseDTO> hitneSaPrekoracenimRokom() {
-        return prijavaRepo.findHitneSaPrekoracenimRokom(LocalDateTime.now())
-                .stream().map(this::mapToResponse).collect(Collectors.toList());
+    private Map<String, Object> odgovorPokrenut(Long prijavaId, String sagaId) {
+        Map<String, Object> r = new HashMap<>();
+        r.put("prijavaId", prijavaId);
+        r.put("sagaId", sagaId);
+        r.put("poruka", "Akcija je pokrenuta. Obavijestit cemo vas putem notifikacija.");
+        r.put("status", "POKRENUTO");
+        return r;
     }
 
     public PrijavaResponseDTO mapToResponse(Prijava p) {
@@ -220,17 +237,10 @@ public class PrijavaService {
                 .stream().map(f -> f.getPutanja()).collect(Collectors.toList());
         dto.setFotografijePutanje(putanje);
 
-        // Dohvati naziv dodijeljene gradske službe
-        if (p.getGrdSluzbald() != null) {
-            String nazivSluzbe = managementServiceKlijent.dohvatiNazivSluzbe(p.getGrdSluzbald());
-            dto.setNazivSluzbe(nazivSluzbe);
-        }
-
-        // Dohvati ime odgovornog radnika (korisnikId pohranjen kao odgovornoLiceId)
-        if (p.getOdgovornoLiceId() != null) {
-            String imeRadnika = managementServiceKlijent.dohvatiImeRadnika(p.getOdgovornoLiceId());
-            dto.setImeRadnika(imeRadnika);
-        }
+        if (p.getGrdSluzbald() != null)
+            dto.setNazivSluzbe(managementServiceKlijent.dohvatiNazivSluzbe(p.getGrdSluzbald()));
+        if (p.getOdgovornoLiceId() != null)
+            dto.setImeRadnika(managementServiceKlijent.dohvatiImeRadnika(p.getOdgovornoLiceId()));
 
         return dto;
     }
