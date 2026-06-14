@@ -27,6 +27,11 @@ class NotifikacijaControllerTest {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private NotifikacijaRepository repo;
 
+    private static final String GATEWAY_SECRET  = "test-secret";
+    private static final String KORISNIK_EMAIL  = "test@fixit.ba";
+    private static final String KORISNIK_ULOGA  = "KORISNIK";
+    private static final String KORISNIK_ID     = "1";
+
     @BeforeEach
     void setUp() {
         repo.deleteAll();
@@ -48,6 +53,10 @@ class NotifikacijaControllerTest {
 
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.naslov").value("Test naslov"))
@@ -60,6 +69,10 @@ class NotifikacijaControllerTest {
 
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.greska").value("VALIDATION_ERROR"));
@@ -69,11 +82,19 @@ class NotifikacijaControllerTest {
     void dohvatiZaKorisnika_uspjesno() throws Exception {
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(
                                 validDto(10L, "Naslov 1", TipNotifikacije.STATUS_PROMJENA))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/notifikacije/korisnik/10"))
+        mockMvc.perform(get("/api/notifikacije/korisnik/10")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].korisnikId").value(10L));
@@ -83,11 +104,19 @@ class NotifikacijaControllerTest {
     void dohvatiNeprocitane_uspjesno() throws Exception {
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(
                                 validDto(20L, "Naslov 2", TipNotifikacije.NOVI_KOMENTAR))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/notifikacije/korisnik/20/neprocitane"))
+        mockMvc.perform(get("/api/notifikacije/korisnik/20/neprocitane")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(1));
@@ -97,11 +126,19 @@ class NotifikacijaControllerTest {
     void brojNeprocitanih_uspjesno() throws Exception {
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(
                                 validDto(30L, "Naslov 3", TipNotifikacije.NOVI_KOMENTAR))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/notifikacije/korisnik/30/broj-neprocitanih"))
+        mockMvc.perform(get("/api/notifikacije/korisnik/30/broj-neprocitanih")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.brojNeprocitanih").value(1));
     }
@@ -110,13 +147,21 @@ class NotifikacijaControllerTest {
     void oznaci_uspjesno() throws Exception {
         String response = mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(
                                 validDto(40L, "Naslov 4", TipNotifikacije.RIJESENO))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         Long id = objectMapper.readTree(response).get("id").asLong();
 
-        mockMvc.perform(patch("/api/notifikacije/" + id + "/procitano"))
+        mockMvc.perform(patch("/api/notifikacije/" + id + "/procitano")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.procitano").value(true));
@@ -124,7 +169,11 @@ class NotifikacijaControllerTest {
 
     @Test
     void oznaci_nePostoji_vraca404() throws Exception {
-        mockMvc.perform(patch("/api/notifikacije/9999/procitano"))
+        mockMvc.perform(patch("/api/notifikacije/9999/procitano")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
     }
@@ -133,16 +182,28 @@ class NotifikacijaControllerTest {
     void paged_uspjesno() throws Exception {
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(
                                 validDto(50L, "Naslov A", TipNotifikacije.NOVA_PRIJAVA))))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(
                                 validDto(50L, "Naslov B", TipNotifikacije.NOVA_PRIJAVA))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/notifikacije/korisnik/50/paged")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .param("page", "0")
                         .param("size", "1"))
                 .andExpect(status().isOk())
@@ -153,6 +214,10 @@ class NotifikacijaControllerTest {
     @Test
     void paged_nevalidanPage_vraca500() throws Exception {
         mockMvc.perform(get("/api/notifikacije/korisnik/50/paged")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .param("page", "x"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.greska").value("INTERNAL_SERVER_ERROR"));
@@ -162,16 +227,28 @@ class NotifikacijaControllerTest {
     void neprocitanePoTipu_uspjesno() throws Exception {
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(
                                 validDto(60L, "Komentar", TipNotifikacije.NOVI_KOMENTAR))))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/notifikacije")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .content(objectMapper.writeValueAsString(
                                 validDto(60L, "Status", TipNotifikacije.STATUS_PROMJENA))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/notifikacije/korisnik/60/neprocitane-tip")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .param("tip", "NOVI_KOMENTAR"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -182,6 +259,10 @@ class NotifikacijaControllerTest {
     @Test
     void neprocitanePoTipu_nevalidanTip_vraca500() throws Exception {
         mockMvc.perform(get("/api/notifikacije/korisnik/60/neprocitane-tip")
+                        .header("X-Gateway-Secret", GATEWAY_SECRET)
+                        .header("X-Korisnik-Email", KORISNIK_EMAIL)
+                        .header("X-Korisnik-Uloga", KORISNIK_ULOGA)
+                        .header("X-Korisnik-Id", KORISNIK_ID)
                         .param("tip", "POGRESAN_TIP"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.greska").value("INTERNAL_SERVER_ERROR"));
