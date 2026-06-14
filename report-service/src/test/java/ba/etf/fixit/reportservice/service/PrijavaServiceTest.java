@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -141,4 +141,37 @@ class PrijavaServiceTest {
         when(prijavaRepo.findById(99L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class, () -> service.dohvatiPoId(99L));
     }
+
+
+@Test
+void arhiviraj_uspjesno() {
+    Kategorija kat = napraviKategoriju();
+    Statusi status = napraviStatus("Novo");
+    Prijava prijava = napraviPrijavu(kat, status);
+
+    when(prijavaRepo.findById(1L)).thenReturn(Optional.of(prijava));
+
+    service.arhiviraj(1L);
+
+    assertTrue(prijava.getArhiviran());
+    verify(prijavaRepo).save(prijava);
+}
+@Test
+void promijeniStatusAsync_istiStatus_bacaException() {
+    Kategorija kat = napraviKategoriju();
+    Statusi status = napraviStatus("Novo");
+
+    Prijava prijava = napraviPrijavu(kat, status);
+
+    when(prijavaRepo.findById(1L)).thenReturn(Optional.of(prijava));
+    when(statusiRepo.findByNaziv("Novo"))
+            .thenReturn(Optional.of(status));
+
+    assertThrows(
+            IllegalArgumentException.class,
+            () -> service.promijeniStatusAsync(1L, "Novo", 1L)
+    );
+}
+
+
 }

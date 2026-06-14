@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -102,4 +103,31 @@ class GradskaSluzbaServiceTest {
         when(repo.existsById(99L)).thenReturn(false);
         assertThrows(ResourceNotFoundException.class, () -> service.obrisi(99L));
     }
+@Test
+void mapToResponse_uspjesno() {
+    GradskaSluzba sluzba = new GradskaSluzba(
+            null,
+            "JKP Test",
+            "Opis",
+            "test@jkp.ba",
+            "033-111-111",
+            true
+    );
+    sluzba.setId(5L);
+
+    GradskaSluzbaResponseDTO dto = service.mapToResponse(sluzba);
+
+    assertNotNull(dto);
+    assertEquals(5L, dto.getId());
+    assertEquals("JKP Test", dto.getNaziv());
+    assertEquals("Opis", dto.getOpis());
+    assertEquals("test@jkp.ba", dto.getKontaktEmail());
+    assertEquals("033-111-111", dto.getKontaktTelefon());
+    assertTrue(dto.getAktivan());
+}
+
+
+
+
+
 }

@@ -88,4 +88,41 @@ class UserServiceKlijentTest {
         KorisnikDTO result = klijent.validirajKorisnika(1L);
         assertNull(result);
     }
+
+
+
+@Test
+void validirajKorisnika_neaktivan_sadrziIspravnuPoruku() {
+    KorisnikDTO korisnik =
+            new KorisnikDTO(2L, "Marko", "Peric",
+                    "marko@test.ba", "GRADJANIN", false);
+
+    when(restTemplate.getForObject(anyString(), eq(KorisnikDTO.class)))
+            .thenReturn(korisnik);
+
+    UserServiceKlijent.KorisnikNijeAktivanException ex =
+            assertThrows(
+                    UserServiceKlijent.KorisnikNijeAktivanException.class,
+                    () -> klijent.validirajKorisnika(2L)
+            );
+
+    assertTrue(ex.getMessage().contains("2"));
+}
+
+@Test
+void validirajKorisnika_nepostojeci_sadrziIspravnuPoruku() {
+
+    when(restTemplate.getForObject(anyString(), eq(KorisnikDTO.class)))
+            .thenThrow(HttpClientErrorException.NotFound.class);
+
+    UserServiceKlijent.KorisnikNijePronadjenException ex =
+            assertThrows(
+                    UserServiceKlijent.KorisnikNijePronadjenException.class,
+                    () -> klijent.validirajKorisnika(99L)
+            );
+
+    assertTrue(ex.getMessage().contains("99"));
+}
+
+
 }
