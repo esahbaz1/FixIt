@@ -15,7 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
+import ba.etf.fixit.managementservice.security.KorisnikKontekst;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 class RadnikControllerTest {
 
@@ -37,8 +37,18 @@ class RadnikControllerTest {
     private Long sluzbaId;
     private Long drugaSluzbaId;
 
+    private void setKontekstAdmin() {
+    KorisnikKontekst.postavi(
+            new KorisnikKontekst.KorisnikPodaci(
+                    1L,
+                    "admin@test.ba",
+                    "ADMIN"
+            )
+    );
+}
     @BeforeEach
     void setUp() {
+        KorisnikKontekst.obrisi();
         radnikRepo.deleteAll();
         profilRepo.deleteAll();
         sluzbaRepo.deleteAll();
@@ -53,6 +63,7 @@ class RadnikControllerTest {
 
     @Test
     void kreirajRadnika_uspjesno() throws Exception {
+        setKontekstAdmin();
         RadnikRequestDTO dto = new RadnikRequestDTO();
         dto.setKorisnikId(1L);
         dto.setGradskaSluzbaId(sluzbaId);
@@ -69,6 +80,7 @@ class RadnikControllerTest {
 
     @Test
     void dohvatiSveRadnike_uspjesno() throws Exception {
+        setKontekstAdmin();
         mockMvc.perform(get("/api/radnici"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
@@ -76,6 +88,7 @@ class RadnikControllerTest {
 
     @Test
     void dohvatiPoId_uspjesno() throws Exception {
+        setKontekstAdmin();
         Radnik radnik = sluzbaRepo.findById(sluzbaId)
                 .map(s -> radnikRepo.save(new Radnik(null, 7L, s, "Inspektor", "A", true)))
                 .orElseThrow();
@@ -88,6 +101,7 @@ class RadnikControllerTest {
 
     @Test
     void dohvatiPoId_nePostoji_vraca404() throws Exception {
+        setKontekstAdmin();
         mockMvc.perform(get("/api/radnici/9999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
@@ -95,6 +109,7 @@ class RadnikControllerTest {
 
     @Test
     void dohvatiPoSluzbi_uspjesno() throws Exception {
+        setKontekstAdmin();
         sluzbaRepo.findById(sluzbaId)
                 .ifPresent(s -> radnikRepo.save(new Radnik(null, 5L, s, "Vozac", null, true)));
 
@@ -105,6 +120,7 @@ class RadnikControllerTest {
 
     @Test
     void paged_uspjesno() throws Exception {
+        setKontekstAdmin();
         sluzbaRepo.findById(sluzbaId).ifPresent(s -> {
             radnikRepo.save(new Radnik(null, 11L, s, "Inspektor", "A", true));
             radnikRepo.save(new Radnik(null, 12L, s, "Inspektor", "B", true));
@@ -120,6 +136,7 @@ class RadnikControllerTest {
 
     @Test
     void paged_nevalidanPage_vraca500() throws Exception {
+        setKontekstAdmin();
         mockMvc.perform(get("/api/radnici/sluzba/" + sluzbaId + "/paged")
                         .param("page", "abc"))
                 .andExpect(status().isInternalServerError())
@@ -128,6 +145,7 @@ class RadnikControllerTest {
 
     @Test
     void aktivniPoPoziciji_uspjesno() throws Exception {
+        setKontekstAdmin();
         sluzbaRepo.findById(sluzbaId).ifPresent(s -> {
             radnikRepo.save(new Radnik(null, 13L, s, "Inspektor", "A", true));
             radnikRepo.save(new Radnik(null, 14L, s, "Vozac", "B", true));
@@ -142,6 +160,7 @@ class RadnikControllerTest {
 
     @Test
     void aktivniPoPoziciji_bezParametra_vraca500() throws Exception {
+        setKontekstAdmin();
         mockMvc.perform(get("/api/radnici/sluzba/" + sluzbaId + "/aktivni"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.greska").value("INTERNAL_SERVER_ERROR"));
@@ -149,6 +168,7 @@ class RadnikControllerTest {
 
     @Test
     void obrisiRadnika_uspjesno() throws Exception {
+        setKontekstAdmin();
         Radnik radnik = sluzbaRepo.findById(sluzbaId)
                 .map(s -> radnikRepo.save(new Radnik(null, 8L, s, "Terenski", "A", true)))
                 .orElseThrow();
@@ -162,6 +182,7 @@ class RadnikControllerTest {
 
     @Test
     void obrisiRadnika_nePostoji_vraca404() throws Exception {
+        setKontekstAdmin();
         mockMvc.perform(delete("/api/radnici/9999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
@@ -169,6 +190,7 @@ class RadnikControllerTest {
 
     @Test
     void premjesti_uspjesno() throws Exception {
+        setKontekstAdmin();
         Radnik radnik = sluzbaRepo.findById(sluzbaId)
                 .map(s -> radnikRepo.save(new Radnik(null, 15L, s, "Inspektor", "A", true)))
                 .orElseThrow();
@@ -181,6 +203,7 @@ class RadnikControllerTest {
 
     @Test
     void premjesti_radnikNePostoji_vraca404() throws Exception {
+        setKontekstAdmin();
         mockMvc.perform(put("/api/radnici/9999/premjesti/" + drugaSluzbaId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
@@ -188,6 +211,7 @@ class RadnikControllerTest {
 
     @Test
     void premjesti_sluzbaNePostoji_vraca404() throws Exception {
+        setKontekstAdmin();
         Radnik radnik = sluzbaRepo.findById(sluzbaId)
                 .map(s -> radnikRepo.save(new Radnik(null, 16L, s, "Inspektor", "A", true)))
                 .orElseThrow();
@@ -199,6 +223,7 @@ class RadnikControllerTest {
 
     @Test
     void kreirajRadnika_bezKorisnikId_vraca400() throws Exception {
+        setKontekstAdmin();
         RadnikRequestDTO dto = new RadnikRequestDTO();
         dto.setGradskaSluzbaId(sluzbaId);
 
@@ -212,6 +237,7 @@ class RadnikControllerTest {
 
     @Test
     void kreirajRadnika_sluzbaNePostoji_vraca404() throws Exception {
+        setKontekstAdmin();
         RadnikRequestDTO dto = new RadnikRequestDTO();
         dto.setKorisnikId(1L);
         dto.setGradskaSluzbaId(9999L);
@@ -222,4 +248,37 @@ class RadnikControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
     }
+
+    @Test
+void dohvatiPoKorisniku_uspjesno() throws Exception {
+    setKontekstAdmin();
+
+    Radnik radnik = sluzbaRepo.findById(sluzbaId)
+            .map(s -> radnikRepo.save(
+                    new Radnik(null, 77L, s, "Inspektor", "A", true)))
+            .orElseThrow();
+
+    mockMvc.perform(get("/api/radnici/korisnik/77"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.korisnikId").value(77L));
+}
+
+
+@Test
+void dohvatiPoKorisniku_nePostoji_vraca404() throws Exception {
+    setKontekstAdmin();
+
+    mockMvc.perform(get("/api/radnici/korisnik/9999"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+}
+
+@Test
+void dodijeliNaPrijavu_radnikNePostoji_vraca404() throws Exception {
+    setKontekstAdmin();
+
+    mockMvc.perform(post("/api/radnici/9999/prijave/1"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+}
 }

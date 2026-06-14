@@ -15,8 +15,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDateTime;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -28,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-@AutoConfigureMockMvc(addFilters = false) // 🔥 KLJUČNO
+@AutoConfigureMockMvc(addFilters = false) 
 @ActiveProfiles("test")
 class PrijavaControllerTest {
 
@@ -56,6 +54,16 @@ class PrijavaControllerTest {
                         1L,
                         "test@test.ba",
                         "GRADJANIN"
+                )
+        );
+    }
+
+    private void setKontekstRadnik() {
+        KorisnikKontekst.postavi(
+                new KorisnikKontekst.KorisnikPodaci(
+                        1L,
+                        "radnik@test.ba",
+                        "RADNIK"
                 )
         );
     }
@@ -153,6 +161,8 @@ class PrijavaControllerTest {
 
     @Test
     void dohvatiPoId_nePostoji_vraca404() throws Exception {
+        setKontekst();
+
         mockMvc.perform(get("/api/prijave/9999"))
                 .andExpect(status().isNotFound());
     }
@@ -160,6 +170,8 @@ class PrijavaControllerTest {
     @Test
     void partialUpdate_uspjesno() throws Exception {
         Long id = kreirajPrijavu("Stari");
+
+        setKontekstRadnik();
 
         mockMvc.perform(patch("/api/prijave/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -171,6 +183,8 @@ class PrijavaControllerTest {
     @Test
     void arhiviraj_uspjesno() throws Exception {
         Long id = kreirajPrijavu("Arhiva");
+
+        setKontekstRadnik();
 
         mockMvc.perform(patch("/api/prijave/" + id + "/arhiviraj"))
                 .andExpect(status().isNoContent());
@@ -199,4 +213,30 @@ class PrijavaControllerTest {
         mockMvc.perform(get("/api/prijave/dashboard"))
                 .andExpect(status().isOk());
     }
+
+
+
+
+@Test
+void dohvatiSvePaged_uspjesno() throws Exception {
+    kreirajPrijavu("P1");
+    kreirajPrijavu("P2");
+
+    mockMvc.perform(get("/api/prijave/paged")
+                    .param("page", "0")
+                    .param("size", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray());
+}
+
+@Test
+void historija_uspjesno() throws Exception {
+    Long id = kreirajPrijavu("Historija");
+
+    mockMvc.perform(get("/api/prijave/" + id + "/historija"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray());
+}
+
+
 }

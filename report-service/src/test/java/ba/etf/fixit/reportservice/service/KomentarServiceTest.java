@@ -1,5 +1,6 @@
 package ba.etf.fixit.reportservice.service;
 
+import ba.etf.fixit.reportservice.dto.HistorijaResponseDTO;
 import ba.etf.fixit.reportservice.dto.KomentarRequestDTO;
 import ba.etf.fixit.reportservice.dto.KomentarResponseDTO;
 import ba.etf.fixit.reportservice.exception.ResourceNotFoundException;
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -92,4 +94,60 @@ class KomentarServiceTest {
         List<KomentarResponseDTO> result = service.dohvatiJavne(1L);
         assertTrue(result.isEmpty());
     }
+
+    @Test
+void dohvatiInterne_vracaListu() {
+    Prijava p = napraviPrijavu();
+
+    Komentar k1 = new Komentar(null, 1L, p, "Interni1", "Tekst1", true, null);
+    Komentar k2 = new Komentar(null, 2L, p, "Interni2", "Tekst2", true, null);
+
+    when(komentarRepo.findByPrijavaIdAndInteranTrue(1L))
+            .thenReturn(List.of(k1, k2));
+
+    List<KomentarResponseDTO> result = service.dohvatiInterne(1L);
+
+    assertEquals(2, result.size());
+    assertTrue(result.get(0).getInteran());
+}
+
+@Test
+void dohvatiHistoriju_uspjesno() {
+    Prijava p = napraviPrijavu();
+
+    TipPromjene tip = new TipPromjene();
+    tip.setStatus1("NOVO");
+    tip.setStatus2("U_OBRADI");
+
+    HistorijaPrijave h = new HistorijaPrijave();
+    h.setId(1L);
+    h.setPrijava(p);
+    h.setKorisnikId(5L);
+    h.setTipPromjene(tip);
+
+    when(prijavaRepo.existsById(1L)).thenReturn(true);
+    when(historijaPrijaveRepo.findByPrijavaIdOrderByDatumPromjeneAsc(1L))
+            .thenReturn(List.of(h));
+
+    List<HistorijaResponseDTO> result = service.dohvatiHistoriju(1L);
+
+    assertEquals(1, result.size());
+    assertEquals(1L, result.get(0).getPrijavaId());
+    assertEquals("NOVO", result.get(0).getStatusIz());
+    assertEquals("U_OBRADI", result.get(0).getStatusU());
+}
+
+
+@Test
+void dohvatiHistoriju_prijavaNePostoji_bacaException() {
+    when(prijavaRepo.existsById(99L)).thenReturn(false);
+
+    assertThrows(
+            ResourceNotFoundException.class,
+            () -> service.dohvatiHistoriju(99L)
+    );
+
+    verify(historijaPrijaveRepo, never())
+            .findByPrijavaIdOrderByDatumPromjeneAsc(anyLong());
+}
 }

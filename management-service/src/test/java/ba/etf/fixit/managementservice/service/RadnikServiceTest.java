@@ -14,14 +14,23 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-
+import ba.etf.fixit.managementservice.client.UserServiceKlijent;
 @ExtendWith(MockitoExtension.class)
 class RadnikServiceTest {
 
     @Mock private RadnikRepository radnikRepo;
     @Mock private GradskaSluzbaRepository sluzbaRepo;
+    @Mock private UserServiceKlijent userServiceKlijent;
     @InjectMocks private RadnikService service;
+    private UserServiceKlijent.KorisnikInfo napraviKorisnika(Long id) {
+    UserServiceKlijent.KorisnikInfo k = new UserServiceKlijent.KorisnikInfo();
+    k.setId(id);
+    k.setIme("Test");
+    k.setPrezime("Korisnik");
+    return k;
+}
 
     private GradskaSluzba napraviSluzbu() {
         GradskaSluzba s = new GradskaSluzba(null, "JKP Test", "Opis", "jkp@test.ba", "033-000-000", true);
@@ -33,7 +42,8 @@ class RadnikServiceTest {
     void kreiraj_uspjesno() {
         GradskaSluzba sluzba = napraviSluzbu();
         when(sluzbaRepo.findById(1L)).thenReturn(Optional.of(sluzba));
-
+         when(userServiceKlijent.dohvatiKorisnika(10L))
+        .thenReturn(napraviKorisnika(10L));
         Radnik radnik = new Radnik(null, 10L, sluzba, "Inspektor", "Elektrika", true);
         when(radnikRepo.save(any())).thenReturn(radnik);
 
@@ -64,7 +74,10 @@ class RadnikServiceTest {
 
     @Test
     void dohvatiPoId_postoji_vraćaDTO() {
+        
         GradskaSluzba sluzba = napraviSluzbu();
+        when(userServiceKlijent.dohvatiKorisnika(5L))
+        .thenReturn(napraviKorisnika(5L));
         Radnik radnik = new Radnik(null, 5L, sluzba, "Vozač", null, true);
         when(radnikRepo.findById(1L)).thenReturn(Optional.of(radnik));
 

@@ -102,4 +102,7 @@ public class RadnikController {
         reportServiceKlijent.dodijeliRadnikaNaPrijavu(prijavaId, radnik.getKorisnikId());
         return ResponseEntity.noContent().build();
     }
+
+
+    
 }
