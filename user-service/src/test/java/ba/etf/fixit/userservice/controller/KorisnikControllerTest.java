@@ -36,7 +36,6 @@ class KorisnikControllerTest {
         korisnikRepository.deleteAll();
     }
 
-    // Uloga je uklonjena iz DTO - svaki novi korisnik je automatski GRADJANIN
     private RegistracijaRequestDTO validRegistracija(String email) {
         RegistracijaRequestDTO dto = new RegistracijaRequestDTO();
         dto.setIme("Ana");
@@ -52,6 +51,7 @@ class KorisnikControllerTest {
 
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email").value("ana@test.ba"))
@@ -65,6 +65,7 @@ class KorisnikControllerTest {
 
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.greska").value("VALIDATION_ERROR"))
@@ -78,6 +79,7 @@ class KorisnikControllerTest {
 
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.greska").value("VALIDATION_ERROR"));
@@ -89,11 +91,13 @@ class KorisnikControllerTest {
 
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.greska").value("CONFLICT"));
@@ -104,6 +108,7 @@ class KorisnikControllerTest {
         RegistracijaRequestDTO reg = validRegistracija("ana2@test.ba");
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(reg)))
                 .andExpect(status().isCreated());
 
@@ -113,6 +118,7 @@ class KorisnikControllerTest {
 
         mockMvc.perform(post("/api/auth/prijava")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.poruka").value("Prijava uspjesna"))
@@ -125,6 +131,7 @@ class KorisnikControllerTest {
         RegistracijaRequestDTO reg = validRegistracija("ana4@test.ba");
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(reg)))
                 .andExpect(status().isCreated());
 
@@ -134,6 +141,7 @@ class KorisnikControllerTest {
 
         mockMvc.perform(post("/api/auth/prijava")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(login)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
@@ -152,6 +160,7 @@ class KorisnikControllerTest {
         RegistracijaRequestDTO dto = validRegistracija("id@test.ba");
         String response = mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -177,6 +186,7 @@ class KorisnikControllerTest {
         RegistracijaRequestDTO dto = validRegistracija("delete@test.ba");
         String response = mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -197,6 +207,7 @@ class KorisnikControllerTest {
         RegistracijaRequestDTO dto = validRegistracija("delete2@test.ba");
         String response = mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -280,6 +291,7 @@ class KorisnikControllerTest {
     void aktivniPoUlozi_uspjesno() throws Exception {
         mockMvc.perform(post("/api/auth/registracija")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Gateway-Secret", "local-dev-secret")
                         .content(objectMapper.writeValueAsString(
                                 validRegistracija("aktivni@test.ba"))))
                 .andExpect(status().isCreated());
