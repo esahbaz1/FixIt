@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import GlobalStyles from "./styles/GlobalStyles";
 import { AuthContext } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationProvider";
 import AppShell from "./components/AppShell";
 import Toast from "./components/Toast";
 import LoginPage from "./pages/LoginPage";
@@ -25,7 +26,6 @@ import {
   loadRefreshTokenFromStorage,
   API_BASE,
 } from "./api/client";
-
 
 function PrivateRoute({ auth, children }) {
   if (auth === "loading") {
@@ -57,21 +57,14 @@ export default function App() {
     async function tryRestoreSession() {
       const savedUser = loadUserFromStorage();
       const savedRefreshToken = loadRefreshTokenFromStorage();
-
-      if (!savedUser || !savedRefreshToken) {
-        setAuth(null);
-        return;
-      }
-
+      if (!savedUser || !savedRefreshToken) { setAuth(null); return; }
       try {
         const res = await fetch(`${API_BASE}/api/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken: savedRefreshToken }),
         });
-
         if (!res.ok) throw new Error("Token nije valjan");
-
         const data = await res.json();
         setTokens(data.token, data.refreshToken || savedRefreshToken);
         setKorisnikKontekst(savedUser.uloga, savedUser.id);
@@ -80,22 +73,13 @@ export default function App() {
         setAuth(null);
       }
     }
-
     tryRestoreSession();
   }, []);
 
-  function showToast(msg, type = "success") {
-    setToast({ msg, type });
-  }
+  function showToast(msg, type = "success") { setToast({ msg, type }); }
 
   function handleLogin(data) {
-    const userData = {
-      id: data.id,
-      email: data.email,
-      uloga: data.uloga,
-      ime: data.ime,
-      prezime: data.prezime,
-    };
+    const userData = { id: data.id, email: data.email, uloga: data.uloga, ime: data.ime, prezime: data.prezime };
     setTokens(data.token, data.refreshToken);
     setKorisnikKontekst(data.uloga, data.id);
     saveUserToStorage(userData);
@@ -109,31 +93,23 @@ export default function App() {
     navigate("/login", { replace: true });
   }
 
-  const authCtx =
-    auth && auth !== "loading"
-      ? { user: auth.user, logout: handleLogout, showToast }
-      : null;
+  const authCtx = auth && auth !== "loading"
+    ? { user: auth.user, logout: handleLogout, showToast }
+    : null;
 
   return (
     <>
       <GlobalStyles />
-      {toast && (
-        <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />
-      )}
+      {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
       <Routes>
-       
         <Route
           path="/login"
           element={
             auth && auth !== "loading" ? (
               <Navigate to="/" replace />
             ) : (
-              <LoginPage
-                onLogin={handleLogin}
-                switchToRegister={() => navigate("/register")}
-                loading={auth === "loading"}
-              />
+              <LoginPage onLogin={handleLogin} switchToRegister={() => navigate("/register")} loading={auth === "loading"} />
             )
           }
         />
@@ -143,47 +119,34 @@ export default function App() {
             auth && auth !== "loading" ? (
               <Navigate to="/" replace />
             ) : (
-              <RegisterPage
-                onSuccess={() => {
-                  showToast("Nalog kreiran. Prijavite se.");
-                  navigate("/login");
-                }}
-                switchToLogin={() => navigate("/login")}
-              />
+              <RegisterPage onSuccess={() => { showToast("Nalog kreiran. Prijavite se."); navigate("/login"); }} switchToLogin={() => navigate("/login")} />
             )
           }
         />
 
-        
         <Route
           path="/*"
           element={
             <PrivateRoute auth={auth}>
               <AuthContext.Provider value={authCtx}>
-                <AppShell>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/prijave" element={<PrijaveListPage />} />
-                    <Route path="/prijave/:id" element={<PrijavaDetailPage />} />
-                    <Route
-                      path="/nova"
-                      element={
-                        <NovaPrijavaPage
-                          onSuccess={() => {
-                            showToast("Prijava uspješno kreirana!");
-                            navigate("/prijave");
-                          }}
-                        />
-                      }
-                    />
-                    <Route path="/notifikacije" element={<NotifikacijePage />} />
-                    <Route path="/admin" element={<AdminPage />} />
-                    <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
-                    <Route path="/statistika" element={<StatistikaPage />} />
-                    <Route path="/profil" element={<ProfilPage />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </AppShell>
+                {/* NotificationProvider mora biti unutar AuthContext.Provider
+                    jer useSocket i brojNeprocitanih trebaju user.id */}
+                <NotificationProvider>
+                  <AppShell>
+                    <Routes>
+                      <Route path="/"                   element={<Dashboard />} />
+                      <Route path="/prijave"            element={<PrijaveListPage />} />
+                      <Route path="/prijave/:id"        element={<PrijavaDetailPage />} />
+                      <Route path="/nova"               element={<NovaPrijavaPage onSuccess={() => { showToast("Prijava uspješno kreirana!"); navigate("/prijave"); }} />} />
+                      <Route path="/notifikacije"       element={<NotifikacijePage />} />
+                      <Route path="/admin"              element={<AdminPage />} />
+                      <Route path="/admin-dashboard"    element={<AdminDashboardPage />} />
+                      <Route path="/statistika"         element={<StatistikaPage />} />
+                      <Route path="/profil"             element={<ProfilPage />} />
+                      <Route path="*"                   element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </AppShell>
+                </NotificationProvider>
               </AuthContext.Provider>
             </PrivateRoute>
           }

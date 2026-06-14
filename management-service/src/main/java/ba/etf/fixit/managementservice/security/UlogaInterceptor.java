@@ -13,15 +13,15 @@ import java.util.Set;
 /**
  * Interceptor za provjeru uloga korisnika na nivou managementservisa.
  *
- * Koristi se u kombinaciji sa GatewaySecurityFilter — filtar vec postavio
+ * Koristi se u kombinaciji sa GatewaySecurityFilter - filtar vec postavio
  * korisnicke podatke u ThreadLocal, a ovaj interceptor provjerava
  * ima li korisnik potrebnu ulogu za pristup resursu.
  *
  * Pravila pristupa za management-service:
- *  - GET /api/radnici/** — RADNIK, RUKOVODILAC, ADMIN
- *  - POST/PUT/DELETE /api/radnici/** — RUKOVODILAC, ADMIN
- *  - GET /api/sluzbe/** — svi autentificirani
- *  - POST/PUT/DELETE /api/sluzbe/** — ADMIN
+ *  - GET /api/radnici/** - RADNIK, RUKOVODILAC, ADMIN
+ *  - POST/PUT/DELETE /api/radnici/** - RUKOVODILAC, ADMIN
+ *  - GET /api/sluzbe/** - svi autentificirani
+ *  - POST/PUT/DELETE /api/sluzbe/** - ADMIN
  */
 @Component
 public class UlogaInterceptor implements HandlerInterceptor {
@@ -36,23 +36,23 @@ public class UlogaInterceptor implements HandlerInterceptor {
         String metoda = request.getMethod();
         String putanja = request.getRequestURI();
 
-        // Actuator putevi — uvijek dozvoljeni
+        // Actuator putevi - uvijek dozvoljeni
         if (putanja.startsWith("/actuator")) {
             return true;
         }
 
-        // Swagger — dozvoljeno bez auth (samo u dev modu)
+        // Swagger - dozvoljeno bez auth (samo u dev modu)
         if (putanja.startsWith("/swagger-ui") || putanja.startsWith("/api-docs")) {
             return true;
         }
 
-        // Ako nema uloge — korisnik nije autentificiran (zahtjev nije dosao kroz gateway)
+        // Ako nema uloge - korisnik nije autentificiran (zahtjev nije dosao kroz gateway)
         if (uloga == null || uloga.isBlank()) {
             pisGresku(response, HttpStatus.UNAUTHORIZED, "Korisnik nije autentificiran");
             return false;
         }
 
-        // Provjera za radnike — izmjene zahtijevaju RUKOVODILAC ili ADMIN
+        // Provjera za radnike - izmjene zahtijevaju RUKOVODILAC ili ADMIN
         if (putanja.startsWith("/api/radnici") && ADMIN_METODE.contains(metoda)) {
             if (!imaUlogu(uloga, "RUKOVODILAC", "ADMIN")) {
                 pisGresku(response, HttpStatus.FORBIDDEN,
@@ -61,7 +61,7 @@ public class UlogaInterceptor implements HandlerInterceptor {
             }
         }
 
-        // Provjera za sluzbe — sve izmjene zahtijevaju ADMIN
+        // Provjera za sluzbe - sve izmjene zahtijevaju ADMIN
         if (putanja.startsWith("/api/sluzbe") && ADMIN_METODE.contains(metoda)) {
             if (!imaUlogu(uloga, "ADMIN")) {
                 pisGresku(response, HttpStatus.FORBIDDEN,

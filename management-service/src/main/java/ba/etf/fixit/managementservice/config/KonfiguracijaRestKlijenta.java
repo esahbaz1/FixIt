@@ -12,7 +12,7 @@ import org.springframework.web.client.RestTemplate;
 public class KonfiguracijaRestKlijenta {
 
     /**
-     * Plain RestTemplate sa Apache HttpClient — podrzava PATCH metodu.
+     * Plain RestTemplate sa Apache HttpClient - podrzava PATCH metodu.
      * Koristi se za direktne pozive prema drugim servisima (bez Eureka load balancera).
      */
     @Bean

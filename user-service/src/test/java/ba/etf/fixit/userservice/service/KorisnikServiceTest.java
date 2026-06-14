@@ -24,7 +24,7 @@ class KorisnikServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @InjectMocks private KorisnikService korisnikService;
 
-    // Pomocna metoda — uloga se vise ne prima u DTO
+    // Pomocna metoda - uloga se vise ne prima u DTO
     private RegistracijaRequestDTO napraviDto(String email) {
         RegistracijaRequestDTO dto = new RegistracijaRequestDTO();
         dto.setIme("Test");
@@ -49,7 +49,7 @@ class KorisnikServiceTest {
 
         assertNotNull(result);
         assertEquals("test@test.ba", result.getEmail());
-        // Kljucna provjera — uloga mora biti GRADJANIN bez obzira sto smo proslijedili
+        // Kljucna provjera - uloga mora biti GRADJANIN bez obzira sto smo proslijedili
         assertEquals(UlogaKorisnika.GRADJANIN, result.getUloga());
     }
 

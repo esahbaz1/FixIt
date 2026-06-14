@@ -182,9 +182,6 @@ services:
 # MIKROSERVISI
 # ─────────────────────────────────────────────────────────────
 
-  # user-service i management-service ne koriste RabbitMQ
-  # pa ne trebaju čekati na njega
-
   user-service:
     build:
       context: ./user-service
@@ -311,6 +308,7 @@ services:
     restart: unless-stopped
     ports:
       - "8084:8084"
+      - "9001:9001"   # Socket.IO port (netty-socketio, odvojen od Spring MVC)
     networks:
       - fixit-network
     environment:
@@ -326,6 +324,8 @@ services:
       - spring.rabbitmq.username=${RABBITMQ_USER}
       - spring.rabbitmq.password=${RABBITMQ_PASS}
       - GATEWAY_SECRET=${GATEWAY_SECRET}
+      - socketio.host=0.0.0.0
+      - socketio.port=9001
     depends_on:
       mysql-notifications:
         condition: service_healthy
@@ -394,10 +394,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # VITE_API_URL mora biti prazan string ili "/" jer nginx proxy
-        # preusmjerava /api/* ka api-gateway kontejneru interno.
-        # Browser šalje zahtjeve na isti origin (port 80), nginx ih forward-uje.
         VITE_API_BASE: ""
+        # Socket.IO se spaja direktno na port 9001 (nije proxied kroz nginx
+        # jer WebSocket upgrade zahtijeva posebnu konfiguraciju).
+        # U produkciji zamijeni localhost s domenskim imenom servera.
+        VITE_SOCKET_URL: "http://localhost:9001"
     container_name: fixit-frontend
     restart: unless-stopped
     ports:

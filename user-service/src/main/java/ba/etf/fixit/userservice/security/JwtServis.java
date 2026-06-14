@@ -156,7 +156,7 @@ public class JwtServis {
         }
     }
 
-    /** Automatsko ciscenje isteklih zapisa — svaki dan u ponoc. */
+    /** Automatsko ciscenje isteklih zapisa - svaki dan u ponoc. */
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void ocistiIstekleTokene() {

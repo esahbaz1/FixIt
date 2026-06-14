@@ -175,7 +175,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
     setLoading(true);
     setError("");
     try {
-      await apiCall("/api/prijave", {
+      const res = await apiCall("/api/prijave", {
         method: "POST",
         body: JSON.stringify({
           naslov: form.naslov,
@@ -184,12 +184,12 @@ export default function NovaPrijavaPage({ onSuccess }) {
           longitude: parseFloat(form.longitude) || 18.4131,
           adresa: form.adresa,
           kategorijaId: parseInt(form.kategorijaId),
-          korisnikId: user?.id,
           prioritet: form.prioritet,
         }),
       });
       setDone(true);
-      setTimeout(onSuccess, 1600);
+      // Akcija je pokrenuta async; redirect nakon kratke pauze
+      setTimeout(onSuccess, 2000);
     } catch (err) {
       setError(err.message);
     } finally {

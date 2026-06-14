@@ -9,9 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ValidacijaRequestDTO {
-    @NotNull(message = "Korisnik ID je obavezan")
-    private Long korisnikId;
-
     @NotNull(message = "Vrijednost potvrdjeno je obavezna")
     private Boolean potvrdjeno;
 }

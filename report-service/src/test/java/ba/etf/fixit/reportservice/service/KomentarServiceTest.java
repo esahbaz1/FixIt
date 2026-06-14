@@ -4,6 +4,7 @@ import ba.etf.fixit.reportservice.dto.KomentarRequestDTO;
 import ba.etf.fixit.reportservice.dto.KomentarResponseDTO;
 import ba.etf.fixit.reportservice.exception.ResourceNotFoundException;
 import ba.etf.fixit.reportservice.model.*;
+import ba.etf.fixit.reportservice.repository.HistorijaPrijaveRepository;
 import ba.etf.fixit.reportservice.repository.KomentarRepository;
 import ba.etf.fixit.reportservice.repository.PrijavaRepository;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ class KomentarServiceTest {
 
     @Mock private KomentarRepository komentarRepo;
     @Mock private PrijavaRepository prijavaRepo;
+    @Mock private HistorijaPrijaveRepository historijaPrijaveRepo;
     @InjectMocks private KomentarService service;
 
     private Prijava napraviPrijavu() {
@@ -49,12 +51,12 @@ class KomentarServiceTest {
         when(komentarRepo.save(any())).thenReturn(k);
 
         KomentarRequestDTO dto = new KomentarRequestDTO();
-        dto.setKorisnikId(2L);
         dto.setNaslov("Naslov");
         dto.setTekst("Tekst komentara");
         dto.setInteran(false);
 
-        KomentarResponseDTO result = service.dodaj(1L, dto);
+        // korisnikId dolazi iz konteksta (token), prosljeđuje se kao parametar
+        KomentarResponseDTO result = service.dodaj(1L, dto, 2L);
         assertNotNull(result);
         assertEquals("Tekst komentara", result.getTekst());
         assertEquals(2L, result.getKorisnikId());
@@ -66,15 +68,14 @@ class KomentarServiceTest {
         when(prijavaRepo.findById(99L)).thenReturn(Optional.empty());
 
         KomentarRequestDTO dto = new KomentarRequestDTO();
-        dto.setKorisnikId(1L);
         dto.setTekst("Komentar");
 
-        assertThrows(ResourceNotFoundException.class, () -> service.dodaj(99L, dto));
+        assertThrows(ResourceNotFoundException.class, () -> service.dodaj(99L, dto, 1L));
         verify(komentarRepo, never()).save(any());
     }
 
     @Test
-    void dohvatiJavne_vraćaListu() {
+    void dohvatiJavne_vracacListu() {
         Prijava p = napraviPrijavu();
         Komentar k1 = new Komentar(null, 1L, p, "N1", "Tekst 1", false, null);
         Komentar k2 = new Komentar(null, 2L, p, "N2", "Tekst 2", false, null);
