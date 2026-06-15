@@ -12,31 +12,7 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * NAPOMENA: Ova konfiguracija MORA biti identicna konfiguraciji u drugom servisu
- * (isti queue argumenti), inace RabbitMQ baca PRECONDITION_FAILED kada oba servisa
- * pokusaju deklarisati isti queue sa razlicitim argumentima.
- *
- * VAZNO O QUEUE ARGUMENTIMA:
- * Queue argumenti (npr. x-dead-letter-exchange) se postavljaju SAMO prilikom
- * PRVOG kreiranja queue-a. Ako queue vec postoji u RabbitMQ-u sa drugim
- * argumentima (ili bez njih), Spring AMQP NE MOZE ih promijeniti - dobija se
- * 406 PRECONDITION_FAILED, sto izaziva beskonacnu petlju reconnect pokusaja.
- *
- * Zato OVDJE NE definisemo x-dead-letter-exchange argumente na postojecim
- * queue-ovima (q.status.promijenjen, q.notifikacija.kreirana, q.notifikacija.greska),
- * jer bi to srusilo konekciju na postojecu instalaciju.
- *
- * Beskonacna petlja iz logova je rijesena na drugi nacin:
- * factory.setDefaultRequeueRejected(false) - kada @RabbitListener baci exception,
- * poruka se NE vraca u queue (requeue=false). Bez dead-letter-exchange argumenta
- * na queue-u, RabbitMQ takvu poruku jednostavno odbacuje (DISCARD) umjesto da je
- * vrati - sto prekida petlju. Poruka se gubi, ali se vise ne ponavlja unedogled.
- *
- * Stvarni problem (Data truncated for column 'tip') rjesava SchemaMigracija,
- * koja prosiruje kolonu 'tip' na VARCHAR(40) nakon sto Hibernate zavrsi
- * ddl-auto=update (ApplicationReadyEvent).
- */
+
 @Configuration
 public class RabbitMQKonfiguracija {
 

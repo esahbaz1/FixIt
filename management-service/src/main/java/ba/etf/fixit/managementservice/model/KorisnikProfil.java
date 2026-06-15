@@ -4,10 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Profil korisnika u management-service.
- * korisnikId - referenca na Korisnik iz user-service (bez FK).
- */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

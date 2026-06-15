@@ -2,7 +2,7 @@ export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8080"
 
 // ─── Token Storage ─────────────────────────────────────────────────────────
 // Access token čuvan u memoriji (ne localStorage) radi XSS zaštite.
-// Refresh token čuva se u sessionStorage kako bi preživio refresh stranice (UX-01 / CQ-04).
+// Refresh token čuva se u sessionStorage kako bi preživio refresh stranice.
 let _accessToken = null;
 let _refreshPromise = null;
 let _korisnikUloga = null;
@@ -33,7 +33,7 @@ export function clearTokens() {
 
 export function getAccessToken() { return _accessToken; }
 
-// CQ-04 / UX-01: Pomoćne funkcije za perzistenciju korisničkih podataka u sessionStorage
+
 export function saveUserToStorage(userData) {
   sessionStorage.setItem(USER_KEY, JSON.stringify(userData));
 }
@@ -76,7 +76,7 @@ async function refreshAccessToken() {
   return _refreshPromise;
 }
 
-// ─── HTTP status → korisnička poruka greške (UX-02) ────────────────────────
+
 export function friendlyError(status, fallbackMessage, context) {
   if (status === 500 || status === 503) {
     return "Sistem je trenutno nedostupan. Pokušajte ponovo za nekoliko minuta.";
@@ -126,7 +126,6 @@ export async function apiCall(path, options = {}, explicitToken = null) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const rawMsg = body.message || body.poruka || body.error || `HTTP ${res.status}`;
-    // UX-02: prikazujemo korisnički prihvatljive poruke umjesto tehničkih
     // Za login endpoint (prijava), 401 znači pogrešna lozinka/email
     const context = path.includes("/auth/prijava") ? "login" : undefined;
     throw new Error(friendlyError(res.status, rawMsg, context));

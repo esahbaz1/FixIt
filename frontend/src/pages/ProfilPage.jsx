@@ -62,8 +62,7 @@ export default function ProfilPage() {
               </>
             )}
 
-            {/* CQ-06: Sekvencijalni ID se ne prikazuje direktno – maskujemo ga
-                 da spriječimo IDOR napade (predvidivi ID-ovi omogućavaju enumeraciju korisnika) */}
+            {}
             <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${T.line}`, textAlign: "left" }}>
               <div style={{ fontSize: 10, fontWeight: 500, color: T.textMuted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>ID Korisnika</div>
               <code style={{ fontSize: 13, fontWeight: 600, color: T.textSub, fontFamily: "'Geist Mono', monospace", letterSpacing: "0.05em" }}>

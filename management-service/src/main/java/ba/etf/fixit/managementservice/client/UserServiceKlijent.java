@@ -42,8 +42,8 @@ public class UserServiceKlijent {
     }
 
     /**
-     * Dohvata ime i prezime korisnika po ID-u.
-     * U slučaju greške vraća null (ne bacamo iznimku - dodjela radnika ne smije pući zbog nedostupnog user-service).
+     * Dohvaca ime i prezime korisnika po ID-u.
+     * U slučaju greške vraća null (ne bacamo iznimku - dodjela radnika ne smije puci zbog nedostupnog user-service).
      */
     public KorisnikInfo dohvatiKorisnika(Long korisnikId) {
         if (korisnikId == null) return null;

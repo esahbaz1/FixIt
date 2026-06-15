@@ -24,7 +24,7 @@ function renderReg() {
 
 async function popuni(user, { ime = "Ime", prezime = "Prezime", email = "test@test.ba", lozinka = "Jaka!1lozinka" } = {}) {
   const inputs = screen.getAllByRole("textbox");
-  // Redosljed u formi: ime, prezime, email (password je poseban tip)
+  // Redoslijed u formi: ime, prezime, email (password je poseban tip)
   if (ime)     await user.type(inputs[0], ime);
   if (prezime) await user.type(inputs[1], prezime);
   if (email)   await user.type(inputs[2], email);

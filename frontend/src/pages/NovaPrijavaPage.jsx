@@ -21,7 +21,6 @@ function LeafletMap({ lat, lng, onPick }) {
       document.head.appendChild(link);
     }
 
-  
     const initMap = () => {
       if (mapInstanceRef.current) return;
       const L = window.L;
@@ -51,11 +50,9 @@ function LeafletMap({ lat, lng, onPick }) {
         className: "",
       });
 
-
       if (lat && lng) {
         markerRef.current = L.marker([lat, lng], { icon }).addTo(map);
       }
-
 
       map.on("click", (e) => {
         const { lat: clickLat, lng: clickLng } = e.latlng;
@@ -87,7 +84,6 @@ function LeafletMap({ lat, lng, onPick }) {
         markerRef.current = null;
       }
     };
-  
   }, []);
 
   useEffect(() => {
@@ -161,6 +157,9 @@ export default function NovaPrijavaPage({ onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  
+  // Ref pomoću kojeg ćemo skrolati do greške ako se pojavi
+  const errorRef = useRef(null);
 
   function handleMapPick(lat, lng) {
     setForm((prev) => ({
@@ -170,25 +169,50 @@ export default function NovaPrijavaPage({ onSuccess }) {
     }));
   }
 
+  // Automatsko skrolovanje do poruke o grešci čim se pojavi
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [error]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (!form.naslov || form.naslov.trim() === "") {
+      setError("Potrebno unijeti naslov.");
+      setLoading(false);
+      return;
+    }
+
+    if (!form.opis || form.opis.trim() === "") {
+      setError("Potrebno unijeti opis.");
+      setLoading(false);
+      return;
+    }
+
+    if (!form.latitude || !form.longitude) {
+      setError("Potrebno unijeti longitude i latitude ili označiti lokaciju na mapi.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await apiCall("/api/prijave", {
         method: "POST",
         body: JSON.stringify({
           naslov: form.naslov,
           opis: form.opis,
-          latitude: parseFloat(form.latitude) || 43.8563,
-          longitude: parseFloat(form.longitude) || 18.4131,
+          latitude: parseFloat(form.latitude),
+          longitude: parseFloat(form.longitude),
           adresa: form.adresa,
           kategorijaId: parseInt(form.kategorijaId),
           prioritet: form.prioritet,
         }),
       });
       setDone(true);
-      // Akcija je pokrenuta async; redirect nakon kratke pauze
       setTimeout(onSuccess, 2000);
     } catch (err) {
       setError(err.message);
@@ -262,28 +286,11 @@ export default function NovaPrijavaPage({ onSuccess }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 16 }}>
         <div className="card" style={{ padding: 32 }}>
-          {error && (
-            <div
-              style={{
-                background: T.redDim,
-                border: `1px solid ${T.redBorder}`,
-                color: T.red,
-                padding: "10px 14px",
-                borderRadius: 8,
-                marginBottom: 20,
-                fontSize: 13,
-              }}
-            >
-              {error}
-            </div>
-          )}
-
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 18 }}>
               <label className="label">Naslov *</label>
               <input
                 type="text"
-                required
                 value={form.naslov}
                 onChange={(e) => setForm({ ...form, naslov: e.target.value })}
                 placeholder="npr. Oštećenje asfalta — Titova ulica"
@@ -294,7 +301,6 @@ export default function NovaPrijavaPage({ onSuccess }) {
             <div style={{ marginBottom: 18 }}>
               <label className="label">Opis *</label>
               <textarea
-                required
                 value={form.opis}
                 onChange={(e) => setForm({ ...form, opis: e.target.value })}
                 placeholder="Opišite problem — veličina, utjecaj, lokacija..."
@@ -304,7 +310,6 @@ export default function NovaPrijavaPage({ onSuccess }) {
               />
             </div>
 
-          
             <div style={{ marginBottom: 18 }}>
               <label className="label">Kategorija *</label>
               <div
@@ -350,7 +355,6 @@ export default function NovaPrijavaPage({ onSuccess }) {
               </div>
             </div>
 
-     
             <div style={{ marginBottom: 18 }}>
               <label className="label">Prioritet</label>
               <div
@@ -401,7 +405,6 @@ export default function NovaPrijavaPage({ onSuccess }) {
               />
             </div>
 
-     
             <div style={{ marginBottom: 16 }}>
               <label className="label">
                 Lokacija na mapi{" "}
@@ -416,7 +419,6 @@ export default function NovaPrijavaPage({ onSuccess }) {
               />
             </div>
 
-         
             <div
               style={{
                 display: "grid",
@@ -434,7 +436,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
                   onChange={(e) =>
                     setForm({ ...form, latitude: e.target.value })
                   }
-                  placeholder="43.8563"
+                  placeholder="npr. 43.8563"
                   className="input-field"
                   style={{
                     background: form.latitude ? T.greenDim : undefined,
@@ -451,7 +453,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
                   onChange={(e) =>
                     setForm({ ...form, longitude: e.target.value })
                   }
-                  placeholder="18.4131"
+                  placeholder="npr. 18.4131"
                   className="input-field"
                   style={{
                     background: form.longitude ? T.greenDim : undefined,
@@ -460,6 +462,36 @@ export default function NovaPrijavaPage({ onSuccess }) {
                 />
               </div>
             </div>
+
+            {/* --- PORUKA O GREŠCI PREBAČENA OVDJE (Tik iznad dugmeta za slanje) --- */}
+            {error && (
+              <div
+                ref={errorRef}
+                style={{
+                  background: T.redDim,
+                  border: `2px solid ${T.redBorder}`, // Podebljan border radi bolje uočljivosti
+                  color: T.red,
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  fontSize: 14,
+                  fontWeight: "500",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 2px 8px rgba(231, 76, 60, 0.15)", // Blaga sjena u boji greške
+                  animation: "fadeIn 0.2s ease-in-out"
+                }}
+              >
+                {/* Ikona uzvika da dodatno skrene pažnju */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -478,7 +510,6 @@ export default function NovaPrijavaPage({ onSuccess }) {
           </form>
         </div>
 
-        
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="card" style={{ padding: 20 }}>
             <div

@@ -144,8 +144,6 @@ describe("NotificationContext", () => {
   it("kreira socket s ispravnim auth.userId", async () => {
     render(<Consumer />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByTestId("count").textContent).toBe("3"));
-    // If io was called during this test run, assert its init options; otherwise
-    // assume a previous test created the socket and assert listeners were registered.
     if (io.mock.calls.length > 0) {
       expect(io.mock.calls[0][1].query).toEqual({ userId: "42" });
     } else {

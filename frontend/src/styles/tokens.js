@@ -11,7 +11,7 @@ const T = {
 
   text:       "#E8F5ED",
   textSub:    "#8DB89A",
-  textMuted:  "#7AB898",  // UX-05: povećan kontrast (bio #4D7A5C, WCAG AA nekompatibilan)
+  textMuted:  "#7AB898",  
   textInv:    "#0F2A1A",
 
   blue:       "#2ECC71",

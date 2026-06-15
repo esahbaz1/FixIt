@@ -98,7 +98,7 @@ describe("LoginPage", () => {
   });
 
   it("submit dugme je disabled dok traje zahtjev", async () => {
-    apiCall.mockReturnValue(new Promise(() => {})); // nikad se ne resolve
+    apiCall.mockReturnValue(new Promise(() => {})); 
     const user = userEvent.setup();
     renderLogin();
 

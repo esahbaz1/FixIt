@@ -17,7 +17,7 @@ html, body {
   flex-direction: column;
 }
 
-/* ─── UX-04: Responsive breakpoints ──────────────────────────────────────── */
+
 
 /* Tablet (768px i manje) */
 @media (max-width: 768px) {
