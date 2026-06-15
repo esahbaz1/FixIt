@@ -1,5 +1,6 @@
 // frontend/src/__tests__/unit/Dashboard.test.jsx
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import React from "react";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";

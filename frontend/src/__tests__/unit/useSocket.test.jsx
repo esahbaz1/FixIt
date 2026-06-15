@@ -1,7 +1,9 @@
 // frontend/src/__tests__/unit/useSocket.test.jsx
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { io, __mockSocket } from "socket.io-client";
+import React from "react";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import io from "socket.io-client";
+import { __mockSocket } from "../setup.js";
 import { useSocket } from "../../socket/useSocket";
 import { AuthContext } from "../../context/AuthContext";
 
@@ -14,9 +16,9 @@ const makeWrapper = (userId) => ({ children }) => (
 describe("useSocket", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it("kreira socket konekciju kad je user.id dostupan", () => {
+  it("kreira socket konekciju kad je user.id dostupan", async () => {
     renderHook(() => useSocket(), { wrapper: makeWrapper(7) });
-    expect(io).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(io).toHaveBeenCalledTimes(1));
   });
 
   it("ne kreira konekciju bez user.id", () => {
@@ -24,10 +26,11 @@ describe("useSocket", () => {
     expect(io).not.toHaveBeenCalled();
   });
 
-  it("šalje userId kao auth parametar", () => {
+  it("šalje userId kao auth parametar", async () => {
     renderHook(() => useSocket(), { wrapper: makeWrapper(99) });
+    await waitFor(() => expect(io).toHaveBeenCalled());
     const opts = io.mock.calls[0][1];
-    expect(opts.auth).toEqual({ userId: "99" });
+    expect(opts.query).toEqual({ userId: "99" });
   });
 
   it("registruje connect i disconnect event listenere", () => {

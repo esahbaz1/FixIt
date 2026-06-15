@@ -1,5 +1,6 @@
 // frontend/src/__tests__/unit/RegisterPage.test.jsx
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -28,7 +29,7 @@ async function popuni(user, { ime = "Ime", prezime = "Prezime", email = "test@te
   if (prezime) await user.type(inputs[1], prezime);
   if (email)   await user.type(inputs[2], email);
   if (lozinka) {
-    const passInput = screen.getByPlaceholderText(/••••/);
+    const passInput = screen.getByPlaceholderText(/Min/i);
     await user.type(passInput, lozinka);
   }
 }
@@ -40,9 +41,13 @@ describe("RegisterPage – validacija", () => {
     const user = userEvent.setup();
     renderReg();
     await popuni(user, { email: "nevaljan-email" });
-    await user.click(screen.getByRole("button", { name: /Registruj/i }));
+    const emailInput = screen.getAllByRole("textbox")[2];
+    emailInput.required = false; // disable native HTML validation for test
+    const form = document.querySelector('form');
+    if (form) form.noValidate = true;
+    await user.click(screen.getByRole("button", { name: /Kreiraj nalog/i }));
     await waitFor(() => {
-      expect(screen.getByText(/valjanu email adresu/i)).toBeInTheDocument();
+      expect(screen.getByText("Unesite valjanu email adresu (npr. korisnik@domena.ba)")).toBeInTheDocument();
     });
     expect(apiCall).not.toHaveBeenCalled();
   });
@@ -51,9 +56,11 @@ describe("RegisterPage – validacija", () => {
     const user = userEvent.setup();
     renderReg();
     await popuni(user, { lozinka: "Krat1!" });
-    await user.click(screen.getByRole("button", { name: /Registruj/i }));
+    const passInput = screen.getByPlaceholderText(/Min/i);
+    passInput.required = false; // disable native HTML validation for test
+    await user.click(screen.getByRole("button", { name: /Kreiraj nalog/i }));
     await waitFor(() => {
-      expect(screen.getByText(/8 karaktera/i)).toBeInTheDocument();
+      expect(screen.getByText("Lozinka mora imati najmanje 8 karaktera.")).toBeInTheDocument();
     });
   });
 
@@ -61,9 +68,9 @@ describe("RegisterPage – validacija", () => {
     const user = userEvent.setup();
     renderReg();
     await popuni(user, { lozinka: "malalozinka1!" });
-    await user.click(screen.getByRole("button", { name: /Registruj/i }));
+    await user.click(screen.getByRole("button", { name: /Kreiraj nalog/i }));
     await waitFor(() => {
-      expect(screen.getByText(/veliko slovo/i)).toBeInTheDocument();
+      expect(screen.getByText("Lozinka mora sadržavati barem jedno veliko slovo.")).toBeInTheDocument();
     });
   });
 
@@ -71,9 +78,9 @@ describe("RegisterPage – validacija", () => {
     const user = userEvent.setup();
     renderReg();
     await popuni(user, { lozinka: "Bezbroja!lozinka" });
-    await user.click(screen.getByRole("button", { name: /Registruj/i }));
+    await user.click(screen.getByRole("button", { name: /Kreiraj nalog/i }));
     await waitFor(() => {
-      expect(screen.getByText(/jedan broj/i)).toBeInTheDocument();
+      expect(screen.getByText("Lozinka mora sadržavati barem jedan broj.")).toBeInTheDocument();
     });
   });
 
@@ -81,9 +88,9 @@ describe("RegisterPage – validacija", () => {
     const user = userEvent.setup();
     renderReg();
     await popuni(user, { lozinka: "Bezspecijala1" });
-    await user.click(screen.getByRole("button", { name: /Registruj/i }));
+    await user.click(screen.getByRole("button", { name: /Kreiraj nalog/i }));
     await waitFor(() => {
-      expect(screen.getByText(/specijalni karakter/i)).toBeInTheDocument();
+      expect(screen.getByText("Lozinka mora sadržavati barem jedan specijalni karakter.")).toBeInTheDocument();
     });
   });
 
@@ -92,7 +99,7 @@ describe("RegisterPage – validacija", () => {
     const user = userEvent.setup();
     renderReg();
     await popuni(user);
-    await user.click(screen.getByRole("button", { name: /Registruj/i }));
+    await user.click(screen.getByRole("button", { name: /Kreiraj nalog/i }));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
   });
 

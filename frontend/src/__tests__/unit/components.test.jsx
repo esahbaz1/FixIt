@@ -2,6 +2,7 @@
 // Pokriva: Toast, StatusChip, PrioChip, Spinner
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import React from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import Toast from "../../components/Toast";
 import { StatusChip, PrioChip } from "../../components/Chips";

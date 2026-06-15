@@ -1,20 +1,26 @@
 // frontend/src/__tests__/unit/NotificationContext.test.jsx
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import React from "react";
 import { render, screen, act, waitFor } from "@testing-library/react";
 import { NotificationProvider } from "../../context/NotificationProvider";
 import { useNotifications } from "../../context/useNotifications";
 import { AuthContext } from "../../context/AuthContext";
-import { io, __mockSocket } from "socket.io-client";
+import io from "socket.io-client";
+import { __mockSocket } from "../setup.js";
 
 // ─── Helper – renderira komponentu s potrebnim provajderima ────────────────
 
 const mockUser = { id: 42, ime: "Test", uloga: "GRADJANIN", email: "test@test.com" };
 
+import { MemoryRouter } from "react-router-dom";
+
 function Wrapper({ children }) {
   const authCtx = { user: mockUser, logout: vi.fn(), showToast: vi.fn() };
   return (
     <AuthContext.Provider value={authCtx}>
-      <NotificationProvider>{children}</NotificationProvider>
+      <MemoryRouter>
+        <NotificationProvider>{children}</NotificationProvider>
+      </MemoryRouter>
     </AuthContext.Provider>
   );
 }
@@ -104,7 +110,7 @@ describe("NotificationContext", () => {
   it("ne kreira socket konekciju bez korisnika", () => {
     function EmptyWrapper({ children }) {
       return (
-        <AuthContext.Provider value={null}>
+        <AuthContext.Provider value={{ user: null }}>
           <NotificationProvider>{children}</NotificationProvider>
         </AuthContext.Provider>
       );
@@ -117,6 +123,6 @@ describe("NotificationContext", () => {
     render(<Consumer />, { wrapper: Wrapper });
     await waitFor(() => expect(io).toHaveBeenCalled());
     const callArgs = io.mock.calls[0];
-    expect(callArgs[1]).toMatchObject({ auth: { userId: "42" } });
+    expect(callArgs[1]).toMatchObject({ query: { userId: "42" } });
   });
 });
