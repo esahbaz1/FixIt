@@ -1,173 +1,230 @@
-```markdown
-# FixIt – Pametna platforma za prijavu komunalnih problema
+# FixIt
 
-**FixIt** je moderna, visoko skalabilna mikroservisna web aplikacija dizajnirana da premosti jaz između građana i lokalne samouprave. Građanima omogućava brzo i jednostavno prijavljivanje komunalnih problema (poput oštećenja na cestama, kvarova ulične rasvjete, divljih deponija ili oštećenja infrastrukture), dok općinskim službama pruža centralizovan, pametan sistem za efikasno upravljanje, dodjelu i rješavanje tih prijava u realnom vremenu.
+## Pametna platforma za prijavu komunalnih problema
+
+**FixIt** je moderna mikroservisna web aplikacija namijenjena digitalizaciji procesa prijave i upravljanja komunalnim problemima. Platforma omogućava građanima jednostavno prijavljivanje problema poput oštećenja cesta, kvarova ulične rasvjete, divljih deponija i drugih infrastrukturnih nedostataka, dok lokalnim službama pruža centralizovan sistem za efikasnu obradu, dodjelu i praćenje prijava.
 
 ---
 
-## Arhitektura Sistema
+## Pregled sistema
 
-Aplikacija je implementirana korištenjem mikroservisne arhitekture zasnovane na **Spring Cloud** ekosistemu i **React** frontend frameworku.
+Aplikacija je implementirana korištenjem **Spring Cloud** mikroservisne arhitekture i **React/Vite** frontend tehnologije.
 
-
-```
-
-```
+```text
                 ┌─────────────────────────┐
                 │  Frontend (React/Vite)  │
                 └────────────┬────────────┘
                              │
                 ┌────────────▼────────────┐
-                │       API Gateway       │ (Spring Cloud Gateway + JWT)
+                │       API Gateway       │
+                │ (Spring Cloud + JWT)    │
                 └────────────┬────────────┘
                              │
  ┌───────────────────────────┼───────────────────────────┐
- │ :8081                     │ :8082                     │ :8083
+ │                           │                           │
+ ▼                           ▼                           ▼
+┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│ user-service │      │management-   │      │report-service│
+│              │      │service       │      │              │
+└──────┬───────┘      └──────┬───────┘      └──────┬───────┘
+       │                     │                     │
+       └─────────────────────┼─────────────────────┘
+                             │
+                     ┌───────▼───────┐
+                     │notification-  │
+                     │service        │
+                     └───────────────┘
 
+      Eureka Server (8761) ⇄ RabbitMQ (SAGA Events)
 ```
-
-┌────┴──────────┐           ┌────┴──────────┐           ┌────┴──────────┐
-│  user-service │           │  management   │           │ report-service│
-│               │           │    -service   │           │               │
-└───────┬───────┘           └───────┬───────┘           └───────┬───────┘
-│                           │                           │
-└───────────────────────────┼───────────────────────────┘
-│ :8084 + :9001 (WebSockets)
-┌───────▼───────┐
-│ notification  │
-│   -service    │
-└───────────────┘
-
-[ Eureka Server :8761 (Discovery) ]  ⇄  [ RabbitMQ (Async SAGA Choreography) ]
-
-```
-
-### Ključne Karakteristike & Tehnologije
-* **Reaktivnost u realnom vremenu:** Asinhrone akcije i promjene statusa prijava implementirane su pomoću **Choreography SAGA** patterna kroz **RabbitMQ**. Klijent trenutno dobija `202 Accepted` odgovor, dok se konačni ishod asinhrono isporučuje na frontend putem **Socket.IO (WebSockets)**.
-* **Izolovane baze podataka:** Svaki mikroservis posjeduje vlastitu, izolovanu **MySQL** bazu podataka, osiguravajući potpuni labavi spoj (*loose coupling*).
-* **Sigurnost:** Centralizovana autorizacija i autentifikacija na API Gateway nivou koristeći asimetrične **RSA (JWT)** ključeve.
 
 ---
 
-##  Pokretanje Aplikacije
+## Ključne karakteristike
 
-Aplikacija se pokreće kombinacijom Docker kontejnera za infrastrukturu i automatizovane PowerShell skripte za same servise.
+### Mikroservisna arhitektura
 
-###  Preduslovi
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/) instaliran i pokrenut
+Sistem je podijeljen na nezavisne servise koji komuniciraju putem REST API-ja i asinhronih događaja.
+
+### Asinhrona obrada događaja
+
+Promjene statusa prijava implementirane su korištenjem **Choreography SAGA** obrasca uz **RabbitMQ**. Klijent odmah dobija odgovor, dok se konačni rezultat isporučuje asinhrono putem WebSocket konekcije.
+
+### Komunikacija u realnom vremenu
+
+Notifikacije i ažuriranja statusa prijava dostavljaju se korisnicima kroz **Socket.IO / WebSocket** komunikaciju.
+
+### Izolovane baze podataka
+
+Svaki mikroservis koristi vlastitu **MySQL** bazu podataka, čime se postiže labavo povezivanje komponenti i jednostavnije održavanje sistema.
+
+### Sigurnost
+
+Autentifikacija i autorizacija centralizovane su na API Gateway nivou korištenjem **JWT tokena** i **RSA ključeva**.
+
+---
+
+## Tehnologije
+
+### Backend
+
+* Java 21
+* Spring Boot
+* Spring Cloud Gateway
+* Spring Security
+* Spring Data JPA
+* Eureka Service Discovery
+* RabbitMQ
+* MySQL
+
+### Frontend
+
+* React
+* Vite
+* Socket.IO Client
+
+### DevOps
+
+* Docker
+* Docker Compose
+* GitHub
+
+---
+
+## Pokretanje aplikacije
+
+### Preduslovi
+
+Potrebno je imati instalirano:
+
+* Docker Desktop
 * Git
-* PowerShell (za Windows korisnike)
+* Java 21
+* Maven
+* Node.js
+* PowerShell (Windows)
 
-### 1. Kloniranje projekta
+---
+
+### 1. Kloniranje repozitorija
+
 ```bash
 git clone <URL_REPOZITORIJA>
 cd FixIt
-
 ```
 
-### 2. Konfiguracija okruženja (`.env`)
+---
 
-U korijenu projekta kreirajte ili uredite `.env` fajl. Za produkcijsko okruženje obavezno generišite jedinstvene ključeve:
+### 2. Konfiguracija okruženja
+
+U korijenu projekta kreirati `.env` datoteku:
 
 ```env
 DB_USERNAME=fixit
-DB_PASSWORD=<vasa_lozinka>
+DB_PASSWORD=your_password
 
 RABBITMQ_USER=fixit
-RABBITMQ_PASS=<vasa_lozinka>
+RABBITMQ_PASS=your_password
 
-JWT_PRIVATE_KEY=<RSA_private_key_base64>
-JWT_PUBLIC_KEY=<RSA_public_key_base64>
+JWT_PRIVATE_KEY=<RSA_PRIVATE_KEY_BASE64>
+JWT_PUBLIC_KEY=<RSA_PUBLIC_KEY_BASE64>
 
-GATEWAY_SECRET=<tajni_kljuc>
-
+GATEWAY_SECRET=<SECRET>
 ```
 
-> ** Savjet za produkciju:** RSA ključeve možete generisati prateći ove komande:
-> ```bash
-> openssl genrsa -out private.pem 2048
-> openssl rsa -in private.pem -pubout -out public.pem
-> # Base64 enkoding:
-> cat private.pem | base64 -w 0
-> cat public.pem | base64 -w 0
-> 
-> ```
-> 
-> 
+---
 
-### 3. Pokretanje infrastrukture (Docker)
+### 3. Pokretanje infrastrukture
 
-Prije pokretanja same aplikacije, potrebno je podići baze podataka i message broker. Pokrenite RabbitMQ i MySQL baze kroz Docker:
+Pokrenuti RabbitMQ i baze podataka:
 
 ```bash
-# Pokretanje RabbitMQ servera sa management panelom
-docker run -d --name rabbitmq \ -p 15672:15672 \ -p 5672:5672 \ rabbitmq:3-management
-
-# Pokretanje izolovanih baza podataka i Eureka servera
-docker compose up -d mysql-users mysql-reports mysql-management mysql-notifications eureka-server
-
+docker compose up -d
 ```
 
-### 4. Pokretanje servisa putem skripte
+Provjera aktivnih kontejnera:
 
-Nakon što su baze i RabbitMQ uspješno podignuti i aktivni, pokrenite kompletnu aplikaciju (mikroservise i frontend) pokretanjem pripremljene PowerShell skripte:
+```bash
+docker ps
+```
+
+---
+
+### 4. Pokretanje aplikacije
+
+Pokretanje svih servisa:
 
 ```powershell
 ./start.ps1
-
 ```
 
 ---
 
-## Pregled Pristupa i Portova
+## Servisi i portovi
 
-Nakon uspješnog pokretanja, komponente sistema su dostupne na sljedećim adresama:
-
-| Komponenta | Tehnologija | URL |
-| --- | --- | --- |
-| **Korisnički Interfejs** | React / Vite | [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) |
-| **API Gateway** | Spring Cloud Gateway | [http://localhost:8080](https://www.google.com/search?q=http://localhost:8080) |
-| **Service Discovery** | Netflix Eureka | [http://localhost:8761](https://www.google.com/search?q=http://localhost:8761) |
-| **Message Broker Panel** | RabbitMQ Management | [http://localhost:15672](https://www.google.com/search?q=http://localhost:15672) <br>
-
-<br> *(User: `fixit` / Pass: `fixit_rabbit_2024`)* |
-
-### Testni Korisnički Podaci (Seed)
-
-Za inicijalno testiranje sistema možete koristiti predefinisanog administratorskog korisnika:
-
-* **Email:** `admin@fixit.ba`
-* **Lozinka:** `Admin12345!`
-* **Uloga:** `ADMIN`
+| Komponenta           | Port  |
+| -------------------- | ----- |
+| Frontend             | 3000  |
+| API Gateway          | 8080  |
+| User Service         | 8081  |
+| Management Service   | 8082  |
+| Report Service       | 8083  |
+| Notification Service | 8084  |
+| WebSocket Server     | 9001  |
+| Eureka Server        | 8761  |
+| RabbitMQ Management  | 15672 |
 
 ---
 
-## Razvojno Pokretanje (Manuelno)
+## Testni korisnik
 
-Ako ne želite koristiti `start.ps1` skriptu, svaki Spring Boot servis možete pokrenuti pojedinačno iz njegovog direktorija uz `local` profil:
+Za inicijalno testiranje sistema:
+
+```text
+Email: admin@fixit.ba
+Lozinka: Admin12345!
+Uloga: ADMIN
+```
+
+---
+
+## Ručno pokretanje servisa
+
+### Backend servis
 
 ```bash
 cd user-service
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
-
 ```
 
-Za pokretanje frontenda manuelno:
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
-
 ```
 
 ---
 
-## Rješavanje Čestih Problema (Troubleshooting)
+## Struktura projekta
 
-* **Port je zauzet:** Ako dobijete grešku da je port zauzet, provjerite da nemate pokrenute lokalne instance MySQL-a (3306) ili RabbitMQ-a van Dockera. Ugasite te servise ili promijenite mapiranje portova u Docker komandama.
-* **Saga ne prolazi (Notifikacije ne stižu):** Osigurajte da je RabbitMQ kontejner u potpunosti startovan i dostupan prije nego što pokrenete servise preko `start.ps1` skripte. Status možete provjeriti kroz `docker ps`.
-
+```text
+FixIt
+│
+├── api-gateway
+├── eureka-server
+├── user-service
+├── management-service
+├── report-service
+├── notification-service
+├── frontend
+├── docker-compose.yml
+└── start.ps1
 ```
 
-```
+---
+
+## Autori
+
+Projekat razvijen u okviru univerzitetskog projekta iz predmeta **Napredne web tehnologije**.
