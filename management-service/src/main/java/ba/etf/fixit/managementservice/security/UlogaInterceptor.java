@@ -13,7 +13,7 @@ import java.util.Set;
 /**
  * Interceptor za provjeru uloga korisnika na nivou managementservisa.
  *
- * Koristi se u kombinaciji sa GatewaySecurityFilter - filtar vec postavio
+ * Koristi se u kombinaciji sa GatewaySecurityFilter - filter je vec postavio
  * korisnicke podatke u ThreadLocal, a ovaj interceptor provjerava
  * ima li korisnik potrebnu ulogu za pristup resursu.
  *

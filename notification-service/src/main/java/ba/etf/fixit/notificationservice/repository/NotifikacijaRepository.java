@@ -7,11 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
-import org.antlr.v4.runtime.atn.SemanticContext.AND;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+
 
 @Repository
 public interface NotifikacijaRepository extends JpaRepository<Notifikacija, Long> {

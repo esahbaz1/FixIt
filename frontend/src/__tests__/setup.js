@@ -2,12 +2,11 @@
 import "@testing-library/jest-dom";
 import React from "react";
 
-// Make React available globally for components compiled to use the
-// classic JSX/runtime that references the `React` identifier.
+
 global.React = React;
 
 // ─── Mock: socket.io-client ──────────────────────────────────────────────────
-// Sprečava stvarne mrežne konekcije. Eksponira __mockSocket za ručno triggeranje
+// Sprječava stvarne mrežne konekcije. Eksponira __mockSocket za ručno triggeranje
 // eventa u testovima koji to trebaju.
 
 const listeners = {};

@@ -24,9 +24,6 @@ import java.util.concurrent.ConcurrentHashMap;
  *       auth: { userId: String(user.id) }   // socket.io-client v4 šalje ovo kao query
  *   });
  *
- * NAPOMENA: netty-socketio 2.x ne podržava getAuthToken().
- * userId se čita iz URL query parametra koji socket.io-client v4
- * automatski dodaje iz auth objekta kao ?userId=...
  */
 @Component
 public class NotifikacijaSocketHandler {
@@ -108,11 +105,7 @@ public class NotifikacijaSocketHandler {
 
     // --- Helper: čitanje userId iz handshake-a -------------------------------
 
-    /**
-     * socket.io-client v4 s { auth: { userId: "42" } } šalje userId
-     * kao URL query parametar (?userId=42).
-     * Netty-socketio 2.x ga eksponira putem getSingleUrlParam().
-     */
+    
     private String extractUserId(HandshakeData data) {
         // Primarni: query param (socket.io-client v4 auth objekt)
         String fromQuery = data.getSingleUrlParam("userId");

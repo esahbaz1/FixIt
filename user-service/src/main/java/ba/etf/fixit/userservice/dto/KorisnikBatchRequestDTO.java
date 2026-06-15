@@ -1,5 +1,4 @@
 package ba.etf.fixit.userservice.dto;
-import jakarta.validation.constraints.*;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;

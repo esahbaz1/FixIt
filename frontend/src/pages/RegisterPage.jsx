@@ -4,7 +4,7 @@ import { apiCall } from "../api/client";
 import AuthLayout from "../components/AuthLayout";
 import Spinner from "../components/Spinner";
 
-// UX-07: Helper za procjenu jačine lozinke
+
 function passwordStrength(password) {
   if (!password) return null;
   let score = 0;
@@ -18,7 +18,7 @@ function passwordStrength(password) {
   return { level: "jaka", color: T.green, width: "100%" };
 }
 
-// UX-06: Regex koji provjerava prisustvo TLD-a
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function RegisterPage({ onSuccess, switchToLogin }) {
@@ -36,11 +36,11 @@ export default function RegisterPage({ onSuccess, switchToLogin }) {
 
   function validate() {
     const errors = {};
-    // UX-06: Provjera email formata s TLD-om
+    
     if (form.email && !EMAIL_REGEX.test(form.email)) {
       errors.email = "Unesite valjanu email adresu (npr. korisnik@domena.ba)";
     }
-    // UX-07: Provjera kompleksnosti lozinke
+    
     if (form.lozinka) {
       if (form.lozinka.length < 8) {
         errors.lozinka = "Lozinka mora imati najmanje 8 karaktera.";
@@ -146,7 +146,7 @@ export default function RegisterPage({ onSuccess, switchToLogin }) {
           </div>
         </div>
 
-        {/* UX-06: Email s custom validacijom */}
+        {}
         <div style={{ marginBottom: 14 }}>
           <label className="label">Email</label>
           <input
@@ -172,7 +172,7 @@ export default function RegisterPage({ onSuccess, switchToLogin }) {
           )}
         </div>
 
-        {/* UX-07: Lozinka s indikatorom jačine */}
+        {}
         <div style={{ marginBottom: 24 }}>
           <label className="label">Lozinka</label>
           <input

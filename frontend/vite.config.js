@@ -11,17 +11,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      // Socket.IO – proksiraj sve /socket.io/ zahtjeve na port 9001
-      // Ovo rješava CORS jer browser vidi samo localhost:5173.
-      // ISPRAVKA: dodan rewriteWsOrigin: true kako Vite ne bi
-      // modificirao Origin header tokom WebSocket upgrade-a,
-      // što može uzrokovati odbijanje konekcije od strane netty-socketio.
       "/socket.io": {
         target: "http://127.0.0.1:9001",
         changeOrigin: true,
         secure: false,
-        ws: true,             // WebSocket upgrade
-        rewriteWsOrigin: true, // ISPRAVKA: sačuvaj originalni Origin header
+        ws: true,             
+        rewriteWsOrigin: true, 
       },
     },
   },

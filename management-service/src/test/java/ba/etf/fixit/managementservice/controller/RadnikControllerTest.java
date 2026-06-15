@@ -1,5 +1,6 @@
 package ba.etf.fixit.managementservice.controller;
 
+import ba.etf.fixit.managementservice.client.ReportServiceKlijent;
 import ba.etf.fixit.managementservice.dto.RadnikRequestDTO;
 import ba.etf.fixit.managementservice.model.GradskaSluzba;
 import ba.etf.fixit.managementservice.model.Radnik;
@@ -12,16 +13,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import ba.etf.fixit.managementservice.security.KorisnikKontekst;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import ba.etf.fixit.managementservice.client.UserServiceKlijent;
+
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
@@ -34,24 +36,37 @@ class RadnikControllerTest {
     @Autowired private GradskaSluzbaRepository sluzbaRepo;
     @Autowired private KorisnikProfilRepository profilRepo;
 
+    // Mockujemo vanjske servise da testovi ne ovise o mrežnoj dostupnosti
+    @MockBean private ReportServiceKlijent reportServiceKlijent;
+    @MockBean private UserServiceKlijent userServiceKlijent;
+
     private Long sluzbaId;
     private Long drugaSluzbaId;
 
     private void setKontekstAdmin() {
-    KorisnikKontekst.postavi(
-            new KorisnikKontekst.KorisnikPodaci(
-                    1L,
-                    "admin@test.ba",
-                    "ADMIN"
-            )
-    );
-}
+        KorisnikKontekst.postavi(
+                new KorisnikKontekst.KorisnikPodaci(1L, "admin@test.ba", "ADMIN")
+        );
+    }
+
+    private UserServiceKlijent.KorisnikInfo napraviKorisnika(Long id) {
+        UserServiceKlijent.KorisnikInfo k = new UserServiceKlijent.KorisnikInfo();
+        k.setId(id);
+        k.setIme("Test");
+        k.setPrezime("Korisnik");
+        return k;
+    }
+
     @BeforeEach
     void setUp() {
         KorisnikKontekst.obrisi();
         radnikRepo.deleteAll();
         profilRepo.deleteAll();
         sluzbaRepo.deleteAll();
+
+        // Defaultni mock za user-service (vraća placeholder korisnika)
+        when(userServiceKlijent.dohvatiKorisnika(anyLong()))
+                .thenAnswer(inv -> napraviKorisnika(inv.getArgument(0)));
 
         GradskaSluzba sluzba = sluzbaRepo.save(new GradskaSluzba(
                 null, "JKP Test", "Testna sluzba", "jkp@test.ba", "033-000-000", true));
@@ -250,35 +265,78 @@ class RadnikControllerTest {
     }
 
     @Test
-void dohvatiPoKorisniku_uspjesno() throws Exception {
-    setKontekstAdmin();
+    void dohvatiPoKorisniku_uspjesno() throws Exception {
+        setKontekstAdmin();
+        Radnik radnik = sluzbaRepo.findById(sluzbaId)
+                .map(s -> radnikRepo.save(new Radnik(null, 77L, s, "Inspektor", "A", true)))
+                .orElseThrow();
 
-    Radnik radnik = sluzbaRepo.findById(sluzbaId)
-            .map(s -> radnikRepo.save(
-                    new Radnik(null, 77L, s, "Inspektor", "A", true)))
-            .orElseThrow();
+        mockMvc.perform(get("/api/radnici/korisnik/77"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.korisnikId").value(77L));
+    }
 
-    mockMvc.perform(get("/api/radnici/korisnik/77"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.korisnikId").value(77L));
-}
+    @Test
+    void dohvatiPoKorisniku_nePostoji_vraca404() throws Exception {
+        setKontekstAdmin();
+        mockMvc.perform(get("/api/radnici/korisnik/9999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+    }
 
+    @Test
+    void dodijeliNaPrijavu_radnikNePostoji_vraca404() throws Exception {
+        setKontekstAdmin();
+        mockMvc.perform(post("/api/radnici/9999/prijave/1"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
+    }
 
-@Test
-void dohvatiPoKorisniku_nePostoji_vraca404() throws Exception {
-    setKontekstAdmin();
+    // ── NOVI TEST ─────────────────────────────────────────────────────────────
 
-    mockMvc.perform(get("/api/radnici/korisnik/9999"))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
-}
+    @Test
+    void dodijeliNaPrijavu_uspjesno_vraca204() throws Exception {
+        setKontekstAdmin();
+        Radnik radnik = sluzbaRepo.findById(sluzbaId)
+                .map(s -> radnikRepo.save(new Radnik(null, 42L, s, "Inspektor", "A", true)))
+                .orElseThrow();
 
-@Test
-void dodijeliNaPrijavu_radnikNePostoji_vraca404() throws Exception {
-    setKontekstAdmin();
+        // report-service je mockan — simuliramo uspješan poziv (void metoda, ne baca ništa)
+        doNothing().when(reportServiceKlijent).dodijeliRadnikaNaPrijavu(1L, 42L);
 
-    mockMvc.perform(post("/api/radnici/9999/prijave/1"))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.greska").value("NOT_FOUND"));
-}
+        mockMvc.perform(post("/api/radnici/" + radnik.getId() + "/prijave/1"))
+                .andExpect(status().isNoContent());
+
+        // Provjera da je stvarno pozvan report-service sa ispravnim parametrima
+        verify(reportServiceKlijent).dodijeliRadnikaNaPrijavu(1L, 42L);
+    }
+
+    @Test
+    void dodijeliNaPrijavu_prijavaNePostoji_vraca404() throws Exception {
+        setKontekstAdmin();
+        Radnik radnik = sluzbaRepo.findById(sluzbaId)
+                .map(s -> radnikRepo.save(new Radnik(null, 43L, s, "Inspektor", "A", true)))
+                .orElseThrow();
+
+        // report-service javlja da prijava ne postoji
+        doThrow(new ReportServiceKlijent.PrijavaNotFoundException("Prijava nije pronadjena"))
+                .when(reportServiceKlijent).dodijeliRadnikaNaPrijavu(eq(9999L), anyLong());
+
+        mockMvc.perform(post("/api/radnici/" + radnik.getId() + "/prijave/9999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void dodijeliNaPrijavu_reportServisNedostupan_vraca503() throws Exception {
+        setKontekstAdmin();
+        Radnik radnik = sluzbaRepo.findById(sluzbaId)
+                .map(s -> radnikRepo.save(new Radnik(null, 44L, s, "Inspektor", "A", true)))
+                .orElseThrow();
+
+        doThrow(new ReportServiceKlijent.ReportServiceNedostupanException("Nedostupan"))
+                .when(reportServiceKlijent).dodijeliRadnikaNaPrijavu(eq(1L), anyLong());
+
+        mockMvc.perform(post("/api/radnici/" + radnik.getId() + "/prijave/1"))
+                .andExpect(status().isServiceUnavailable());
+    }
 }

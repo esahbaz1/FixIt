@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * SIGURNOSNA NAPOMENA: Uloga je namjerno uklonjena.
- * Svaki novi korisnik automatski dobiva ulogu GRADJANIN.
+ * Svaki novi korisnik automatski dobija ulogu GRADJANIN.
  * Dodjela vise uloge vrsi se kroz PUT /api/korisnici/{id}/uloga (samo ADMIN).
  */
 @Data

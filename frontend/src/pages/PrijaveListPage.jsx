@@ -8,7 +8,7 @@ import Spinner from "../components/Spinner";
 import { StatusChip, PrioChip } from "../components/Chips";
 import Icon from "../components/Icon";
 
-// UX-03: onView prop zamijenjen s useNavigate – klik na red mijenja URL na /prijave/:id
+
 export default function PrijaveListPage() {
   const navigate = useNavigate();
   const [prijave, setPrijave] = useState([]);
@@ -131,7 +131,7 @@ export default function PrijaveListPage() {
             <span>Naslov</span><span>Kategorija</span><span>Status</span><span>Prioritet</span><span>Datum</span><span />
           </div>
           {filtered.map((p, i) => (
-            // UX-03: navigate na /prijave/:id umjesto onView callback-a
+            
             <div
               key={p.id}
               onClick={() => navigate(`/prijave/${p.id}`, { state: { prijava: p } })}
