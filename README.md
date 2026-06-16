@@ -225,6 +225,24 @@ FixIt
 
 ---
 
+## Demo video
+
+Video demonstracija aplikacije dostupna je na sljedećem linku:
+
+**FixIt – Demonstracija funkcionalnosti sistema**
+
+https://drive.google.com/drive/folders/1SqGLIewQpHN5Z1mTZQcKoxp0TMQT69Ci?usp=sharing
+
+---
+
 ## Autori
 
 Projekat razvijen u okviru univerzitetskog projekta iz predmeta **Napredne web tehnologije**.
+
+**Tim:**
+
+* Emina Šahbaz
+* Zehra Buza
+* Edna Džinić
+* Jasmina Pilav
+
