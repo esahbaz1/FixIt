@@ -40,6 +40,10 @@ public class GatewayRutaKonfiguracija {
                         .path("/api/prijave/**")
                         .uri("lb://report-service"))
 
+                .route("report-uploads", r -> r
+                        .path("/uploads/**")
+                        .uri("lb://report-service"))
+
                 // MANAGEMENT-SERVICE (port 8082)
                 .route("management-radnici", r -> r
                         .path("/api/radnici/**")

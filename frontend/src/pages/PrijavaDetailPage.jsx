@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import T from "../styles/tokens";
 import { apiCall } from "../api/client";
+import { API_BASE } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
@@ -44,6 +45,9 @@ export default function PrijavaDetailPage() {
   const [odabraniRadnik, setOdabraniRadnik] = useState("");
 
   const [dodjelaLoading, setDodjelaLoading] = useState(false);
+  const [fotografije, setFotografije] = useState([]);
+  const [fotoLoading, setFotoLoading] = useState(false);
+  const [fotoFullscreen, setFotoFullscreen] = useState(null); // URL slike u fullscreenu
 
   useEffect(() => {
 
@@ -119,6 +123,12 @@ apiCall(`/api/prijave/${id}/historija`)
     apiCall(`/api/prijave/${id}`)
       .then((p) => setPrijava(p))
       .catch((err) => console.error("Greška pri osvježavanju prijave:", err));
+
+    setFotoLoading(true);
+    apiCall(`/api/prijave/${id}/fotografije`)
+      .then((data) => setFotografije(Array.isArray(data) ? data : []))
+      .catch(() => setFotografije([]))
+      .finally(() => setFotoLoading(false));
 
    
     setKomentarLoading(true);
@@ -392,6 +402,81 @@ apiCall(`/api/prijave/${id}/historija`)
               </div>
             )}
           </div>
+
+          {/* ─── Fotografije ─────────────────────────────────────────── */}
+          {(fotoLoading || fotografije.length > 0) && (
+            <div className="card" style={{ overflow: "hidden" }}>
+              <div style={{ padding: "16px 24px", borderBottom: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textSub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>Fotografije</span>
+                <span style={{ fontSize: 11, color: T.textMuted, background: T.bgActive, padding: "1px 7px", borderRadius: 100 }}>
+                  {fotoLoading ? "…" : fotografije.length}
+                </span>
+              </div>
+
+              <div style={{ padding: "20px 24px" }}>
+                {fotoLoading ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
+                    <Spinner size={24} />
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
+                    {fotografije.map((foto, idx) => {
+                      const imgUrl = `${API_BASE}${foto.putanja}`;
+                      return (
+                      <div
+                        key={foto.id ?? idx}
+                        onClick={() => setFotoFullscreen(imgUrl)}
+                        style={{ borderRadius: 8, overflow: "hidden", cursor: "pointer", border: `1px solid ${T.line}`, aspectRatio: "1", background: T.bgRaised }}
+                        title="Kliknite za prikaz"
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`Fotografija ${idx + 1}`}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.2s" }}
+                          onMouseEnter={e => e.currentTarget.style.transform = "scale(1.04)"}
+                          onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                        />
+                      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Fullscreen lightbox */}
+          {fotoFullscreen && (
+            <div
+              onClick={() => setFotoFullscreen(null)}
+              style={{
+                position: "fixed", inset: 0, zIndex: 1000,
+                background: "rgba(0,0,0,0.85)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "zoom-out", backdropFilter: "blur(4px)",
+              }}
+            >
+              <img
+                src={fotoFullscreen}
+                alt="Fotografija"
+                style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 10, boxShadow: "0 8px 40px rgba(0,0,0,0.6)", objectFit: "contain" }}
+                onClick={e => e.stopPropagation()}
+              />
+              <button
+                onClick={() => setFotoFullscreen(null)}
+                style={{
+                  position: "fixed", top: 20, right: 24, background: "rgba(255,255,255,0.15)",
+                  border: "none", borderRadius: "50%", width: 36, height: 36, cursor: "pointer",
+                  color: "#fff", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >×</button>
+            </div>
+          )}
 
          
           <div className="card" style={{ overflow: "hidden" }}>
