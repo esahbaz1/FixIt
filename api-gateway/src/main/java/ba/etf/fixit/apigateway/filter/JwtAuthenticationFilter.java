@@ -46,7 +46,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/auth/refresh",
             "/api/auth/odjava",
             "/actuator/health",
-            "/actuator/info"
+            "/actuator/info",
+            "/uploads/"
     );
 
     public JwtAuthenticationFilter(JwtUtil jwtUtil) {

@@ -5,18 +5,27 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // REST API
+      // REST API i staticki fajlovi
       "/api": {
         target: "http://127.0.0.1:8080",
         changeOrigin: true,
         secure: false,
       },
+      "/uploads": {
+        target: "http://127.0.0.1:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      // Socket.IO — HTTP polling + WebSocket upgrade direktno na notification-service
       "/socket.io": {
         target: "http://127.0.0.1:9001",
         changeOrigin: true,
         secure: false,
-        ws: true,             
-        rewriteWsOrigin: true, 
+        ws: true,
+        rewriteWsOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", () => {});
+        },
       },
     },
   },

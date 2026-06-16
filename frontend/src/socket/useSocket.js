@@ -43,7 +43,7 @@ export function useSocket() {
       reconnectionDelay: 3000,
       reconnectionDelayMax: 15000,
       reconnectionAttempts: 20,
-      transports: ["websocket"],
+      transports: ["polling", "websocket"], // polling prvi — potreban za handshake kroz Vite proxy
     });
 
     socketRef.current = _socket;

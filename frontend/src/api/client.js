@@ -134,6 +134,40 @@ export async function apiCall(path, options = {}, explicitToken = null) {
   return res.json();
 }
 
+// ─── Multipart upload (za fotografije) ─────────────────────────────────────
+export async function apiUpload(path, formData) {
+  const headers = {};
+  if (_accessToken) headers["Authorization"] = `Bearer ${_accessToken}`;
+  if (_korisnikUloga) headers["X-Korisnik-Uloga"] = _korisnikUloga;
+  if (_korisnikId)    headers["X-Korisnik-Id"]    = String(_korisnikId);
+
+  let res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (res.status === 401 && sessionStorage.getItem(REFRESH_TOKEN_KEY)) {
+    try {
+      const newToken = await refreshAccessToken();
+      headers["Authorization"] = `Bearer ${newToken}`;
+      res = await fetch(`${API_BASE}${path}`, { method: "POST", headers, body: formData });
+    } catch {
+      clearTokens();
+      window.dispatchEvent(new Event("auth:logout"));
+      throw new Error("Sesija je istekla. Prijavite se ponovo.");
+    }
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const rawMsg = body.message || body.poruka || body.error || `HTTP ${res.status}`;
+    throw new Error(friendlyError(res.status, rawMsg));
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
 // ─── Logout sa invalidacijom na serveru ────────────────────────────────────
 export async function apiLogout() {
   const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);

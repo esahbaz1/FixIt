@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import T from "../styles/tokens";
-import { apiCall } from "../api/client";
+import { apiCall, apiUpload } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { KATEGORIJE, PRIO_CFG } from "../api/constants";
 import PageHeader from "../components/PageHeader";
@@ -157,6 +157,9 @@ export default function NovaPrijavaPage({ onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [fotografije, setFotografije] = useState([]); // File[]
+  const [fotoPreview, setFotoPreview] = useState([]); // object URL[]
+  const fotoInputRef = useRef(null);
   
   // Ref pomoću kojeg ćemo skrolati do greške ako se pojavi
   const errorRef = useRef(null);
@@ -167,6 +170,31 @@ export default function NovaPrijavaPage({ onSuccess }) {
       latitude: lat.toFixed(6),
       longitude: lng.toFixed(6),
     }));
+  }
+
+  function handleFotoChange(e) {
+    const files = Array.from(e.target.files || []);
+    if (fotografije.length + files.length > 5) {
+      setError("Možete dodati najviše 5 fotografija.");
+      return;
+    }
+    const validFiles = files.filter((f) => f.type.startsWith("image/"));
+    if (validFiles.length !== files.length) {
+      setError("Dozvoljen je samo upload slika (jpg, png, webp...).");
+      return;
+    }
+    setError("");
+    setFotografije((prev) => [...prev, ...validFiles]);
+    const newPreviews = validFiles.map((f) => URL.createObjectURL(f));
+    setFotoPreview((prev) => [...prev, ...newPreviews]);
+    // Reset input so isti fajl može biti odabran ponovo
+    e.target.value = "";
+  }
+
+  function removeFoto(idx) {
+    URL.revokeObjectURL(fotoPreview[idx]);
+    setFotografije((prev) => prev.filter((_, i) => i !== idx));
+    setFotoPreview((prev) => prev.filter((_, i) => i !== idx));
   }
 
   // Automatsko skrolovanje do poruke o grešci čim se pojavi
@@ -212,6 +240,14 @@ export default function NovaPrijavaPage({ onSuccess }) {
           prioritet: form.prioritet,
         }),
       });
+
+      // Upload fotografija ako postoje
+      if (fotografije.length > 0 && res?.prijavaId) {
+        const fd = new FormData();
+        fotografije.forEach((f) => fd.append("fajlovi", f));
+        await apiUpload(`/api/prijave/${res.prijavaId}/fotografije`, fd);
+      }
+
       setDone(true);
       setTimeout(onSuccess, 2000);
     } catch (err) {
@@ -405,6 +441,120 @@ export default function NovaPrijavaPage({ onSuccess }) {
               />
             </div>
 
+            {/* ─── Upload fotografija ─────────────────────────────────── */}
+            <div style={{ marginBottom: 16 }}>
+              <label className="label">
+                Fotografije{" "}
+                <span style={{ color: T.textMuted, fontWeight: 400 }}>
+                  — do 5 slika (opcionalno)
+                </span>
+              </label>
+
+              {/* Zona za drag&drop / klik */}
+              <div
+                onClick={() => fotografije.length < 5 && fotoInputRef.current?.click()}
+                style={{
+                  border: `2px dashed ${fotografije.length >= 5 ? T.line : T.blueBorder}`,
+                  borderRadius: 10,
+                  padding: "20px 16px",
+                  textAlign: "center",
+                  cursor: fotografije.length >= 5 ? "not-allowed" : "pointer",
+                  background: fotografije.length >= 5 ? T.bgRaised : T.blueDim,
+                  transition: "all 0.15s",
+                  marginBottom: fotoPreview.length > 0 ? 12 : 0,
+                }}
+              >
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={fotografije.length >= 5 ? T.textMuted : T.blue}
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ marginBottom: 8 }}
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <div style={{ fontSize: 13, color: fotografije.length >= 5 ? T.textMuted : T.blue, fontWeight: 500 }}>
+                  {fotografije.length >= 5
+                    ? "Dostignut maksimalan broj slika"
+                    : "Kliknite za odabir fotografija"}
+                </div>
+                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 4 }}>
+                  JPG, PNG, WEBP · Max 5 slika · {fotografije.length}/5
+                </div>
+              </div>
+
+              <input
+                ref={fotoInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: "none" }}
+                onChange={handleFotoChange}
+              />
+
+              {/* Preview grid */}
+              {fotoPreview.length > 0 && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(5, 1fr)",
+                    gap: 8,
+                  }}
+                >
+                  {fotoPreview.map((src, idx) => (
+                    <div
+                      key={idx}
+                      style={{ position: "relative", borderRadius: 8, overflow: "hidden" }}
+                    >
+                      <img
+                        src={src}
+                        alt={`Fotografija ${idx + 1}`}
+                        style={{
+                          width: "100%",
+                          aspectRatio: "1",
+                          objectFit: "cover",
+                          display: "block",
+                          border: `1px solid ${T.line}`,
+                          borderRadius: 8,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFoto(idx)}
+                        style={{
+                          position: "absolute",
+                          top: 4,
+                          right: 4,
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          background: "rgba(0,0,0,0.65)",
+                          border: "none",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#fff",
+                          fontSize: 12,
+                          lineHeight: 1,
+                          padding: 0,
+                        }}
+                        title="Ukloni fotografiju"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={{ marginBottom: 16 }}>
               <label className="label">
                 Lokacija na mapi{" "}
@@ -525,6 +675,7 @@ export default function NovaPrijavaPage({ onSuccess }) {
             {[
               "Konkretan naslov koji opisuje problem",
               "Detaljan opis veličine i utjecaja",
+              "Dodajte fotografije za brže rješavanje",
               "Kliknite na mapu za tačnu GPS lokaciju",
               "Tačna adresa ubrzava terene",
               "Realan prioritet — hitno samo ako je opasnost",
